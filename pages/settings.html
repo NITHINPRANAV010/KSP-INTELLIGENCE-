@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .settings-layout { display:grid; grid-template-columns:220px 1fr; gap:var(--space-lg); }
+    @media(max-width:1024px){ .settings-layout{grid-template-columns:1fr} .settings-nav-panel{display:none} }
+    .settings-nav-item {
+      display:flex;align-items:center;gap:var(--space-sm);
+      padding:9px var(--space-md);border-radius:var(--radius-md);
+      font-size:0.875rem;color:var(--text-secondary);
+      cursor:pointer;transition:all var(--transition-fast);margin-bottom:2px;
+    }
+    .settings-nav-item:hover { background:rgba(255,255,255,0.04);color:var(--text-primary); }
+    .settings-nav-item.active { background:var(--accent-blue-dim);color:var(--accent-blue); }
+    .toggle-switch {
+      position:relative;display:inline-flex;align-items:center;
+      width:44px;height:24px;cursor:pointer;
+    }
+    .toggle-switch input { opacity:0;width:0;height:0; }
+    .toggle-track {
+      position:absolute;inset:0;
+      background:rgba(255,255,255,0.1);border-radius:99px;
+      transition:background var(--transition-fast);
+    }
+    .toggle-switch input:checked + .toggle-track { background:var(--accent-blue); }
+    .toggle-thumb {
+      position:absolute;left:3px;
+      width:18px;height:18px;border-radius:50%;
+      background:white;transition:transform var(--transition-fast);
+      box-shadow:0 1px 4px rgba(0,0,0,0.3);
+    }
+    .toggle-switch input:checked ~ .toggle-thumb { transform:translateX(20px); }
+    .setting-row {
+      display:flex;align-items:center;justify-content:space-between;
+      padding:var(--space-md) 0;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+    }
+    .setting-row:last-child { border-bottom:none; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item active" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Settings <span>/ System Configuration</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="global-search" placeholder="Search settings…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="settings" style="width:24px;height:24px;color:var(--accent-blue)"></i> System Settings</h1>
+        <p class="page-header-sub">Platform configuration · AI parameters · Notification preferences · Security</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary"><i data-lucide="save" style="width:14px;height:14px"></i> Save Changes</button>
+      </div>
+    </div>
+
+    <div class="settings-layout">
+      <!-- Settings Nav -->
+      <div class="settings-nav-panel">
+        <div class="card card-sm">
+          <div class="settings-nav-item active"><i data-lucide="layout-dashboard" style="width:15px;height:15px"></i> General</div>
+          <div class="settings-nav-item"><i data-lucide="brain-circuit" style="width:15px;height:15px"></i> AI & Prediction</div>
+          <div class="settings-nav-item"><i data-lucide="bell" style="width:15px;height:15px"></i> Notifications</div>
+          <div class="settings-nav-item"><i data-lucide="map" style="width:15px;height:15px"></i> Map Settings</div>
+          <div class="settings-nav-item"><i data-lucide="shield" style="width:15px;height:15px"></i> Security</div>
+          <div class="settings-nav-item"><i data-lucide="database" style="width:15px;height:15px"></i> Data Sources</div>
+          <div class="settings-nav-item"><i data-lucide="palette" style="width:15px;height:15px"></i> Appearance</div>
+          <div class="settings-nav-item"><i data-lucide="info" style="width:15px;height:15px"></i> About</div>
+        </div>
+      </div>
+
+      <!-- Settings Content -->
+      <div class="flex flex-col gap-lg">
+
+        <!-- General -->
+        <div class="card stagger-item">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="layout-dashboard" style="width:15px;height:15px;color:var(--accent-blue)"></i> General Settings</div>
+          </div>
+          <div class="form-group"><label class="form-label">Platform Name</label><input class="form-control" value="KSP AI Crime Intelligence Command Center"></div>
+          <div class="grid-two">
+            <div class="form-group"><label class="form-label">Default District</label><select class="form-control"><option>All Karnataka</option><option selected>Bengaluru Urban</option></select></div>
+            <div class="form-group"><label class="form-label">Default Time Range</label><select class="form-control"><option>Last 24h</option><option selected>Last 7 days</option></select></div>
+          </div>
+          <div class="form-group"><label class="form-label">Language</label><select class="form-control" style="width:auto"><option>English</option><option>Kannada</option><option>Hindi</option></select></div>
+
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Auto-Refresh Dashboard</div><div class="text-xs text-muted">Refresh crime data every 60 seconds</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Live Alert Sound</div><div class="text-xs text-muted">Play sound for critical alerts</div></div>
+            <label class="toggle-switch"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Compact Sidebar</div><div class="text-xs text-muted">Show icons only by default</div></div>
+            <label class="toggle-switch"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+        </div>
+
+        <!-- AI Settings -->
+        <div class="card stagger-item delay-100">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="brain-circuit" style="width:15px;height:15px;color:var(--accent-cyan)"></i> AI & Prediction Engine</div>
+            <span class="badge badge-info">KSP-PredictV2</span>
+          </div>
+
+          <div class="form-group"><label class="form-label">Prediction Horizon</label><select class="form-control" style="width:auto"><option>24 Hours</option><option selected>48 Hours</option><option>72 Hours</option><option>7 Days</option></select></div>
+          <div class="form-group"><label class="form-label">Minimum Confidence Threshold: <span style="color:var(--accent-blue)">65%</span></label><input type="range" class="slider-range" min="50" max="95" value="65" oninput="this.previousElementSibling.querySelector('span').textContent=this.value+'%'"></div>
+
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Auto-Generate Daily Brief</div><div class="text-xs text-muted">AI generates briefing at 6:00 AM daily</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Criminal Network Auto-Analysis</div><div class="text-xs text-muted">AI scans for new criminal associations hourly</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Anomaly Detection</div><div class="text-xs text-muted">Alert on unusual crime pattern spikes</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+
+          <div class="ai-explanation" style="margin-top:var(--space-md)">
+            <div class="text-xs font-semibold text-muted mb-sm uppercase tracking-wide">Model Performance</div>
+            <div class="confidence-gauge mb-sm">
+              <span class="text-xs text-muted" style="width:100px">Overall Accuracy</span>
+              <div class="confidence-track" style="flex:1;margin:0 var(--space-sm)"><div class="confidence-fill" style="width:91.4%"></div></div>
+              <span class="confidence-value">91%</span>
+            </div>
+            <div class="confidence-gauge mb-sm">
+              <span class="text-xs text-muted" style="width:100px">Hotspot Precision</span>
+              <div class="confidence-track" style="flex:1;margin:0 var(--space-sm)"><div class="confidence-fill" style="width:87%"></div></div>
+              <span class="confidence-value">87%</span>
+            </div>
+            <div class="confidence-gauge">
+              <span class="text-xs text-muted" style="width:100px">Network Detection</span>
+              <div class="confidence-track" style="flex:1;margin:0 var(--space-sm)"><div class="confidence-fill" style="width:83%"></div></div>
+              <span class="confidence-value">83%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="card stagger-item delay-200">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="shield" style="width:15px;height:15px;color:var(--success)"></i> Security</div>
+            <span class="badge badge-low">Secure</span>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Two-Factor Authentication</div><div class="text-xs text-muted">Require OTP for all logins</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Session Timeout</div><div class="text-xs text-muted">Auto-logout after inactivity</div></div>
+            <select class="form-control" style="width:auto"><option>30 minutes</option><option selected>1 hour</option><option>2 hours</option></select>
+          </div>
+          <div class="setting-row">
+            <div><div class="text-sm font-semibold text-primary">Audit Logging</div><div class="text-xs text-muted">Log all officer actions and data access</div></div>
+            <label class="toggle-switch"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+          </div>
+          <div class="mt-md">
+            <div class="form-group"><label class="form-label">Data Encryption</label>
+              <div style="display:flex;align-items:center;gap:var(--space-sm);background:var(--success-dim);border:1px solid rgba(34,197,94,0.2);border-radius:var(--radius-md);padding:10px 14px">
+                <i data-lucide="lock" style="width:14px;height:14px;color:var(--success)"></i>
+                <span class="text-sm" style="color:var(--success);font-weight:600">AES-256 Encryption Active · All data encrypted at rest and in transit</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Health (Phase 5 Enterprise Platform) -->
+        <div class="card stagger-item delay-250">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="activity" style="width:15px;height:15px;color:var(--accent-blue)"></i> System Health Diagnostics</div>
+          </div>
+          <div id="ksp-health-container">
+            <!-- Dynamic health panel -->
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="card stagger-item delay-300">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="info" style="width:15px;height:15px;color:var(--accent-blue)"></i> About KSP Intelligence Platform</div>
+          </div>
+          <div class="flex flex-col gap-sm">
+            <div class="flex justify-between text-sm"><span class="text-muted">Version</span><span class="font-mono text-primary">v2.1.0 (2025.07)</span></div>
+            <div class="flex justify-between text-sm"><span class="text-muted">AI Model</span><span class="font-mono text-primary">KSP-PredictV2.1</span></div>
+            <div class="flex justify-between text-sm"><span class="text-muted">Data Points</span><span class="font-mono text-primary">1.2M+ crime records</span></div>
+            <div class="flex justify-between text-sm"><span class="text-muted">Districts Covered</span><span class="font-mono text-primary">All 30 Karnataka Districts</span></div>
+            <div class="flex justify-between text-sm"><span class="text-muted">Developed For</span><span class="text-primary font-semibold">Karnataka State Police Hackathon 2025</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // Render Admin Monitoring Panel
+  window.addEventListener('ksp_enterprise_ready', () => {
+    if (window.KSPSystemHealth) {
+      KSPSystemHealth.renderDashboard('ksp-health-container');
+    }
+  });
+
+  // Settings nav
+  document.querySelectorAll('.settings-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+
+  // ── AI Configuration Controls (Phase 4) ───────────────
+  if (window.KSPAIConfig) {
+    // Bind any AI config toggles/sliders in the settings page
+    const confThresholdEl = document.getElementById('ai-confidence-threshold');
+    const riskSensEl = document.getElementById('ai-risk-sensitivity');
+    const alertSensEl = document.getElementById('ai-alert-sensitivity');
+    const explainEl = document.getElementById('ai-explainability');
+    const autoAlertEl = document.getElementById('ai-auto-alerts');
+
+    if (confThresholdEl) {
+      confThresholdEl.value = KSPAIConfig.get('confidenceThreshold');
+      confThresholdEl.addEventListener('change', () => KSPAIConfig.set('confidenceThreshold', parseFloat(confThresholdEl.value)));
+    }
+    if (riskSensEl) {
+      riskSensEl.value = KSPAIConfig.get('riskSensitivity');
+      riskSensEl.addEventListener('change', () => KSPAIConfig.set('riskSensitivity', riskSensEl.value));
+    }
+    if (alertSensEl) {
+      alertSensEl.value = KSPAIConfig.get('alertSensitivity');
+      alertSensEl.addEventListener('change', () => KSPAIConfig.set('alertSensitivity', alertSensEl.value));
+    }
+    if (explainEl) {
+      explainEl.checked = KSPAIConfig.get('explainability');
+      explainEl.addEventListener('change', () => KSPAIConfig.set('explainability', explainEl.checked));
+    }
+    if (autoAlertEl) {
+      autoAlertEl.checked = KSPAIConfig.get('autoAlerts');
+      autoAlertEl.addEventListener('change', () => KSPAIConfig.set('autoAlerts', autoAlertEl.checked));
+    }
+  }
+});
+</script>
+</body>
+</html>

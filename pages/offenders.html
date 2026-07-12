@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repeat Offenders — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .offenders-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-lg); }
+    @media(max-width:1440px){ .offenders-grid{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:768px) { .offenders-grid{grid-template-columns:1fr} }
+    .risk-arc {
+      width:56px; height:56px;
+      border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:0.875rem; font-weight:800;
+      flex-shrink:0;
+    }
+    .crime-tag {
+      display:inline-flex; align-items:center;
+      background:rgba(255,255,255,0.05);
+      border:1px solid var(--border);
+      border-radius:99px;
+      padding:3px 8px;
+      font-size:0.6875rem;
+      color:var(--text-muted);
+      margin:2px;
+    }
+    .offender-expanded { display:none; }
+    .offender-card.expanded .offender-expanded { display:block; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item active" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Repeat Offenders <span>/ Registry</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="offender-search" placeholder="Search by name, ID, district, crime…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="user-x" style="width:24px;height:24px;color:var(--critical)"></i> Repeat Offender Registry</h1>
+        <p class="page-header-sub">AI-tracked high-risk individuals · Crime history · Association mapping</p>
+      </div>
+      <div class="page-header-actions">
+        <div class="flex gap-sm">
+          <button class="btn btn-secondary btn-sm filter-btn active" data-status="all">All</button>
+          <button class="btn btn-secondary btn-sm filter-btn" data-status="Wanted">Wanted</button>
+          <button class="btn btn-secondary btn-sm filter-btn" data-status="Under Surveillance">Surveillance</button>
+          <button class="btn btn-secondary btn-sm filter-btn" data-status="In Custody">In Custody</button>
+        </div>
+        <button class="btn btn-primary btn-sm">
+          <i data-lucide="plus" style="width:13px;height:13px"></i> Add Offender
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Strip -->
+    <div class="flex gap-md stagger-item" style="margin-bottom:var(--space-lg);flex-wrap:wrap">
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:160px">
+        <div class="kpi-icon-wrap kpi-icon-red" style="width:40px;height:40px"><i data-lucide="user-x" style="width:20px;height:20px"></i></div>
+        <div><div class="text-2xl font-black text-primary" data-count="312">0</div><div class="text-xs text-muted">Total Registered</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:160px">
+        <div class="kpi-icon-wrap kpi-icon-red" style="width:40px;height:40px"><i data-lucide="alert-circle" style="width:20px;height:20px"></i></div>
+        <div><div class="text-2xl font-black text-primary" data-count="34">0</div><div class="text-xs text-muted">Currently Wanted</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:160px">
+        <div class="kpi-icon-wrap kpi-icon-warn" style="width:40px;height:40px"><i data-lucide="eye" style="width:20px;height:20px"></i></div>
+        <div><div class="text-2xl font-black text-primary" data-count="87">0</div><div class="text-xs text-muted">Under Surveillance</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:160px">
+        <div class="kpi-icon-wrap kpi-icon-green" style="width:40px;height:40px"><i data-lucide="lock" style="width:20px;height:20px"></i></div>
+        <div><div class="text-2xl font-black text-primary" data-count="124">0</div><div class="text-xs text-muted">In Custody</div></div>
+      </div>
+    </div>
+
+    <!-- Offender Cards Grid -->
+    <div class="offenders-grid" id="offenders-grid"></div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/network/network-intelligence.js"></script>
+<script src="../ai/offender/offender-profiler.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/counters.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+const STATUS_CLASS = {
+  'Wanted': 'status-wanted',
+  'Under Surveillance': 'status-surv',
+  'In Custody': 'status-custody',
+  'Released on Bail': 'status-bail',
+};
+
+const RISK_COLOR = {
+  critical: '#EF4444', high: '#F59E0B', medium: '#3B82F6', low: '#22C55E'
+};
+
+function getRisk(score) {
+  return score >= 85 ? 'critical' : score >= 65 ? 'high' : score >= 45 ? 'medium' : 'low';
+}
+
+function renderOffenderCard(off) {
+  // ── Retrieve Real AI Profile (Phase 4) ────────────────
+  let aiProfile = null;
+  if (window.KSPOffenderProfiler) {
+    aiProfile = KSPOffenderProfiler.profile({ offenderId: off.id });
+  }
+
+  const score = aiProfile ? aiProfile.riskScore : off.riskScore;
+  const risk = getRisk(score);
+  const color = RISK_COLOR[risk];
+  const initials = off.name.split(' ').map(n => n[0]).slice(0,2).join('');
+  const associateCount = aiProfile ? aiProfile.associateCount : off.associates;
+  const reoffendPct = aiProfile ? Math.round(aiProfile.reoffendingProbability * 100) : 60;
+
+  // Render AI risk factors list
+  let factorsHTML = '';
+  if (aiProfile && aiProfile.riskFactors) {
+    factorsHTML = `
+      <div class="mt-sm mb-sm" style="background:rgba(255,255,255,0.01);padding:var(--space-sm);border-radius:var(--radius-md);border:1px solid var(--border)">
+        <div class="text-xs font-semibold text-muted mb-xs uppercase tracking-wide">🧠 AI Contributing Factors</div>
+        ${aiProfile.riskFactors.map(f => `<div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:3px;line-height:1.4">→ ${f}</div>`).join('')}
+      </div>
+    `;
+  }
+
+  // Render AI recommendations list
+  let recsHTML = '';
+  if (aiProfile && aiProfile.recommendations) {
+    recsHTML = `
+      <div class="mt-sm mb-md" style="background:rgba(59,130,246,0.05);padding:var(--space-sm);border-radius:var(--radius-md);border:1px solid rgba(59,130,246,0.15)">
+        <div class="text-xs font-semibold text-muted mb-xs uppercase tracking-wide">🛡️ AI Recommendations</div>
+        ${aiProfile.recommendations.map(r => `
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:3px;line-height:1.4">
+            <strong style="color:var(--accent-blue)">[${r.priority}]</strong> ${r.action} — <em class="text-muted">${r.detail}</em>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="offender-card stagger-item" id="ocard-${off.id}" onclick="toggleExpand('${off.id}')">
+      <!-- Risk accent line -->
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${color},transparent);border-radius:var(--radius-lg) var(--radius-lg) 0 0"></div>
+ 
+      <div class="flex items-center gap-md mb-md">
+        <!-- Avatar -->
+        <div class="offender-avatar" style="border-color:${color}44;color:${color}">${initials}</div>
+ 
+        <!-- Info -->
+        <div style="flex:1;min-width:0">
+          <div class="font-semibold text-base" style="color:var(--text-primary)">${off.name}</div>
+          <div class="text-xs text-muted">ID: ${off.id} · Age ${off.age} · ${off.gender}</div>
+          <div class="text-xs" style="color:var(--text-secondary);margin-top:2px">${off.district}</div>
+        </div>
+ 
+        <!-- Risk Arc -->
+        <div class="risk-arc" style="background:${color}18;border:2px solid ${color}44;color:${color}">${score}</div>
+      </div>
+ 
+      <!-- Status + Risk -->
+      <div class="flex items-center gap-sm" style="margin-bottom:var(--space-md)">
+        <span class="status-pill ${STATUS_CLASS[off.status] || ''}">${off.status}</span>
+        <span class="risk-badge risk-${risk}">${risk.charAt(0).toUpperCase()+risk.slice(1)} Risk</span>
+        <span class="badge" style="background:rgba(239,68,68,0.08);color:var(--critical);font-size:0.7rem">Recidivism: ${reoffendPct}%</span>
+        <span style="margin-left:auto;font-size:0.75rem;color:var(--text-muted)">${off.arrests} arrests</span>
+      </div>
+ 
+      <!-- Risk Bar -->
+      <div class="risk-score-bar mb-md">
+        <span class="text-xs text-muted" style="width:60px">Risk Score</span>
+        <div class="risk-bar-track">
+          <div class="risk-bar-fill ${risk}" style="width:${score}%"></div>
+        </div>
+        <span style="font-size:0.75rem;font-family:var(--font-mono);color:${color};font-weight:700">${score}/100</span>
+      </div>
+ 
+      <!-- Crime Tags -->
+      <div style="margin-bottom:var(--space-sm)">
+        ${off.crimes.map(c => `<span class="crime-tag">${c}</span>`).join('')}
+      </div>
+ 
+      <!-- Associates & Last Seen -->
+      <div class="flex justify-between text-xs" style="color:var(--text-muted);margin-top:var(--space-sm)">
+        <span><i data-lucide="git-branch" style="width:11px;height:11px;display:inline;vertical-align:middle"></i> ${associateCount} associates</span>
+        <span>Last: ${off.lastSeen}</span>
+      </div>
+ 
+      <!-- Expanded Section -->
+      <div class="offender-expanded">
+        <div class="divider"></div>
+        
+        <!-- contributing factors -->
+        ${factorsHTML}
+
+        <!-- recommendations -->
+        ${recsHTML}
+
+        <div class="section-label">Crime History</div>
+        <div class="timeline">
+          ${off.crimeHistory.map(c => `
+            <div class="timeline-item">
+              <div class="timeline-dot ${c.status==='Open'?'timeline-dot-red':c.status==='Convicted'?'timeline-dot-green':'timeline-dot-yellow'}"></div>
+              <div class="timeline-date">${c.date}</div>
+              <div class="timeline-title">${c.crime}</div>
+              <span class="badge ${c.status==='Open'?'badge-critical':c.status==='Convicted'?'badge-low':'badge-high'}">${c.status}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="flex gap-sm mt-md">
+          <a href="network.html?suspect=${encodeURIComponent(off.name)}" class="btn btn-outline-blue btn-sm flex-1" onclick="event.stopPropagation()">
+            <i data-lucide="git-branch" style="width:13px;height:13px"></i> Network
+          </a>
+          <a href="investigation.html?q=${encodeURIComponent(off.name)}" class="btn btn-primary btn-sm flex-1" onclick="event.stopPropagation()">
+            <i data-lucide="bot" style="width:13px;height:13px"></i> Analyze
+          </a>
+        </div>
+      </div>
+ 
+      <!-- Expand hint -->
+      <div class="text-xs text-muted" style="text-align:center;margin-top:var(--space-sm)">
+        Click to <span class="expand-hint">expand</span>
+      </div>
+    </div>
+  `;
+}
+
+function toggleExpand(id) {
+  const card = document.getElementById('ocard-' + id);
+  card.classList.toggle('expanded');
+  const hint = card.querySelector('.expand-hint');
+  hint.textContent = card.classList.contains('expanded') ? 'collapse' : 'expand';
+  if (window.lucide) lucide.createIcons({ nodes: [card] });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  const grid = document.getElementById('offenders-grid');
+
+  function renderGrid() {
+    const list = KSPDatabase.getOffenders();
+    grid.innerHTML = list.map(o => renderOffenderCard(o)).join('');
+    lucide.createIcons({ nodes: [grid] });
+
+    // Trigger stagger
+    setTimeout(() => {
+      grid.querySelectorAll('.stagger-item').forEach((el,i) => {
+        setTimeout(() => el.classList.add('visible'), i*80);
+      });
+    }, 50);
+  }
+
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const status = btn.dataset.status;
+      const list = KSPDatabase.getOffenders();
+      const filtered = status === 'all' ? list : list.filter(o => o.status === status);
+      grid.innerHTML = filtered.map(o => renderOffenderCard(o)).join('');
+      lucide.createIcons({ nodes: [grid] });
+
+      setTimeout(() => {
+        grid.querySelectorAll('.stagger-item').forEach((el,i) => {
+          setTimeout(() => el.classList.add('visible'), i*80);
+        });
+      }, 50);
+    });
+  });
+
+  // Live search
+  const searchInput = document.getElementById('offender-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      const list = KSPDatabase.getOffenders();
+      const filtered = q ? list.filter(o =>
+        o.name.toLowerCase().includes(q) ||
+        o.id.toLowerCase().includes(q) ||
+        o.district.toLowerCase().includes(q) ||
+        o.status.toLowerCase().includes(q) ||
+        o.crimes.some(c => c.toLowerCase().includes(q))
+      ) : list;
+      grid.innerHTML = filtered.length
+        ? filtered.map(o => renderOffenderCard(o)).join('')
+        : `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted)">No offenders match "<strong style="color:var(--text-primary)">${q}</strong>"</div>`;
+      lucide.createIcons({ nodes: [grid] });
+      setTimeout(() => {
+        grid.querySelectorAll('.stagger-item').forEach((el,i) => {
+          setTimeout(() => el.classList.add('visible'), i*60);
+        });
+      }, 30);
+    });
+  }
+
+  // Add Offender button
+  const addBtn = document.querySelector('[data-action="add-offender"], .btn-primary');
+  if (addBtn && addBtn.textContent.includes('Add Offender')) {
+    addBtn.addEventListener('click', () => {
+      const name = prompt('Enter offender full name:');
+      if (!name || !name.trim()) return;
+      if (typeof showToast === 'function') {
+        showToast(`Offender "${name.trim()}" registration submitted for review.`, 'success');
+      } else {
+        alert(`Offender "${name.trim()}" submitted for review. Record will appear after supervisor approval.`);
+      }
+    });
+  }
+
+  // Re-run on database changes
+  window.addEventListener('ksp_db_update', renderGrid);
+
+  // Initial load
+  renderGrid();
+});
+</script>
+</body>
+</html>

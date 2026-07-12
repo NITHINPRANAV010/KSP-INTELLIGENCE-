@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crime Heatmap — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <style>
+    .heatmap-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 120px);
+    }
+    @media(max-width:1024px){ .heatmap-layout{grid-template-columns:1fr} .side-filters{display:none} }
+    .full-map {
+      height: 100%;
+      min-height: 500px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .side-filters {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      overflow-y: auto;
+    }
+    .slider-range {
+      width: 100%;
+      accent-color: var(--accent-blue);
+      margin-top: 6px;
+    }
+    .district-risk-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .district-risk-item:hover { padding-left: 4px; }
+    .district-risk-item:last-child { border-bottom: none; }
+    .map-stat-overlay {
+      position: absolute;
+      top: var(--space-md);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      display: flex;
+      gap: var(--space-sm);
+    }
+    .map-stat-pill {
+      background: rgba(11,18,32,0.88);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item active" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Crime Heatmap <span>/ Karnataka</span></div>
+    <div class="topnav-search">
+      <i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i>
+      <input type="text" id="global-search" placeholder="Search district, location…">
+    </div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="map" style="width:24px;height:24px;color:var(--accent-blue)"></i> Karnataka Crime Heatmap</h1>
+        <p class="page-header-sub">Interactive geospatial crime visualization • Real-time hotspot detection • District risk overlay</p>
+      </div>
+      <div class="page-header-actions">
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-heat">Heatmap</button>
+          <button class="tab-btn" id="tab-markers">Markers</button>
+          <button class="tab-btn" id="tab-boundary">Boundaries</button>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="window.location.href='reports.html'">
+          <i data-lucide="download" style="width:14px;height:14px"></i>
+          Export Map
+        </button>
+      </div>
+    </div>
+
+    <!-- Crime Category Filters -->
+    <div class="flex gap-sm flex-wrap" style="margin-bottom:var(--space-lg)">
+      <button class="map-filter-pill active" data-filter="all">All Crimes</button>
+      <button class="map-filter-pill" data-filter="theft">Vehicle Theft</button>
+      <button class="map-filter-pill" data-filter="cyber">Cybercrime</button>
+      <button class="map-filter-pill" data-filter="robbery">Robbery</button>
+      <button class="map-filter-pill" data-filter="assault">Assault</button>
+      <button class="map-filter-pill" data-filter="drugs">Narcotics</button>
+      <button class="map-filter-pill" data-filter="fraud">Fraud</button>
+    </div>
+
+    <div class="heatmap-layout">
+      <!-- Left: Filters + District Risk -->
+      <div class="side-filters">
+        <!-- Timeline Slider -->
+        <div class="card card-sm">
+          <div class="card-title mb-md"><i data-lucide="clock" style="width:14px;height:14px;color:var(--accent-blue)"></i> Time Filter</div>
+          <div class="form-group">
+            <label class="form-label">Date Range</label>
+            <select class="form-control">
+              <option>Last 24 Hours</option>
+              <option selected>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 3 Months</option>
+              <option>Custom Range</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time of Day: <span id="time-val" style="color:var(--accent-blue)">All Day</span></label>
+            <input type="range" class="slider-range" id="time-slider" min="0" max="23" value="23">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Heatmap Intensity</label>
+            <input type="range" class="slider-range" id="intensity-slider" min="1" max="10" value="7">
+          </div>
+        </div>
+
+        <!-- District Risk Ranking -->
+        <div class="card card-sm" style="flex:1">
+          <div class="card-title mb-md"><i data-lucide="shield-alert" style="width:14px;height:14px;color:var(--critical)"></i> District Risk</div>
+          <div id="district-risk-list">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <!-- Map Legend -->
+        <div class="card card-sm">
+          <div class="card-title mb-md"><i data-lucide="info" style="width:14px;height:14px;color:var(--accent-cyan)"></i> Legend</div>
+          <div style="background:linear-gradient(90deg,#22C55E,#3B82F6,#F59E0B,#EF4444);height:8px;border-radius:99px;margin-bottom:8px"></div>
+          <div class="flex justify-between text-xs text-muted">
+            <span>Low Risk</span>
+            <span>Medium</span>
+            <span>High Risk</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Map -->
+      <div class="full-map" id="full-map-container">
+        <!-- Overlaid stats bar -->
+        <div class="map-stat-overlay" id="map-stats-overlay">
+          <div class="map-stat-pill"><span style="color:var(--critical)">●</span> 5 Critical Zones</div>
+          <div class="map-stat-pill"><span style="color:var(--warning)">●</span> 4 High Risk</div>
+          <div class="map-stat-pill"><i data-lucide="activity" style="width:12px;height:12px;color:var(--accent-cyan)"></i> Live Data</div>
+        </div>
+        <!-- Map renders here -->
+        <div id="main-heatmap" style="width:100%;height:100%"></div>
+
+        <!-- Map Legend overlay -->
+        <div class="map-legend" style="bottom:var(--space-lg)">
+          <div style="font-size:0.625rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Risk Level</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#EF4444"></div>Critical</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#F59E0B"></div>High</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#3B82F6"></div>Medium</div>
+          <div class="map-legend-item"><div class="map-legend-dot" style="background:#22C55E"></div>Low</div>
+          <div class="map-legend-item" style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">
+            <div style="width:20px;height:2px;background:linear-gradient(90deg,transparent,var(--accent-blue),transparent)"></div>
+            Heat intensity
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/hotspot-detector.js"></script>
+<script src="../js/risk-engine.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/hotspot/hotspot-engine.js"></script>
+<script src="../ai/anomaly/anomaly-detector.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/map.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+let heatmapLayerInstance = null;
+let currentMap = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // Main map
+  currentMap = KSPMap.initMap('main-heatmap', { zoom: 7 });
+
+  function redrawMapHeat() {
+    const filteredIncidents = KSPFilterEngine.query();
+    
+    // Clear existing heat points
+    if (heatmapLayerInstance) currentMap.removeLayer(heatmapLayerInstance);
+
+    const heatPoints = KSPHotspotDetector.getHeatPoints(filteredIncidents);
+    if (heatPoints.length > 0 && window.L && L.heatLayer) {
+      heatmapLayerInstance = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 10 }).addTo(currentMap);
+    }
+  }
+
+  // District risk list (dynamically generated from database)
+  const distList = document.getElementById('district-risk-list');
+  if (distList) {
+    const calculatedDistricts = KSPDatabase.districts.map(d => {
+      const risk = KSPRiskEngine.calculateDistrictRisk(d.name);
+      return { id: d.id, name: d.name, score: risk.score, level: risk.level, crimes: d.crimes };
+    }).sort((a,b) => b.score - a.score);
+
+    distList.innerHTML = calculatedDistricts.map(d => `
+      <div class="district-risk-item" onclick="KSPMap.flyToDistrict('${d.id}')">
+        <div style="width:8px;height:8px;border-radius:50%;background:${KSPMap.getRiskColor(d.level)};flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted)">Score: ${d.score}</div>
+        </div>
+        <span style="font-size:0.75rem;font-weight:700;font-family:var(--font-mono);color:${KSPMap.getRiskColor(d.level)}">${d.level.toUpperCase()}</span>
+      </div>
+    `).join('');
+  }
+
+  // Filter pills (crime category)
+  document.querySelectorAll('.map-filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.map-filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const cat = pill.dataset.filter || 'all';
+      KSPFilterEngine.setFilter('crimeType', cat);
+    });
+  });
+
+  let boundaryLayers = [];
+
+  document.getElementById('tab-heat')?.addEventListener('click', () => {
+    KSPMap.toggleHeatmap(true);
+    clearBoundaries();
+  });
+  
+  document.getElementById('tab-markers')?.addEventListener('click', () => {
+    KSPMap.toggleHeatmap(false);
+    clearBoundaries();
+  });
+  
+  document.getElementById('tab-boundary')?.addEventListener('click', () => {
+    KSPMap.toggleHeatmap(false);
+    clearBoundaries();
+    
+    if (window.KSPHotspotEngine && currentMap) {
+      const polygons = KSPHotspotEngine.getLeafletPolygons({ district: KSPFilterEngine.getFilter('district') || 'all' });
+      
+      polygons.forEach(p => {
+        const poly = L.polygon(p.latlngs, p.options).addTo(currentMap);
+        poly.bindPopup(`
+          <div style="font-size:0.8rem">
+            <b>AI Hotspot Cluster Zone</b><br>
+            Dominant Crime: <b>${p.meta.dominantCrimeType}</b><br>
+            Model Confidence: <b>${Math.round(p.meta.confidence * 100)}%</b><br>
+            ${p.meta.isEmerging ? '<span style="color:var(--critical);font-weight:700">⚠️ Emerging Cluster Detected</span>' : ''}
+          </div>
+        `);
+        boundaryLayers.push(poly);
+      });
+      showToast(`${polygons.length} AI Hotspot boundary polygons drawn.`, 'info');
+    }
+  });
+
+  function clearBoundaries() {
+    boundaryLayers.forEach(l => currentMap.removeLayer(l));
+    boundaryLayers = [];
+  }
+
+  // Time slider
+  document.getElementById('time-slider')?.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value);
+    document.getElementById('time-val').textContent = val === 23 ? 'All Day' : `${val}:00–${val+1}:00`;
+    // Filter hour range
+    const startHour = val === 23 ? null : `${val.toString().padStart(2, '0')}:00`;
+    const endHour = val === 23 ? null : `${(val+1).toString().padStart(2, '0')}:00`;
+    KSPFilterEngine.setFilter('timeframe', val === 23 ? 'all' : 'today');
+  });
+
+  // Re-run on filter updates
+  window.addEventListener('ksp_filter_change', () => {
+    redrawMapHeat();
+    // If boundary tab is active, trigger redrawing boundaries
+    const activeTab = document.querySelector('.tabs .active') || document.getElementById('tab-boundary');
+    if (activeTab && activeTab.id === 'tab-boundary') {
+      document.getElementById('tab-boundary').click();
+    }
+  });
+  
+  // Initial draw
+  redrawMapHeat();
+});
+</script>
+</body>
+</html>

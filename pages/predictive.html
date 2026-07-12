@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Predictive Intelligence — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .pred-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:var(--space-lg); }
+    @media(max-width:1280px){ .pred-grid{grid-template-columns:1fr} }
+    .pred-main { display:grid; grid-template-columns:1fr 340px; gap:var(--space-lg); }
+    @media(max-width:1440px){ .pred-main{grid-template-columns:1fr} }
+    .risk-gauge-wrap {
+      display:flex; flex-direction:column; align-items:center;
+      padding: var(--space-md);
+    }
+    .gauge-canvas { width:100px!important; height:60px!important; }
+    .ai-explanation {
+      background: rgba(59,130,246,0.06);
+      border: 1px solid rgba(59,130,246,0.15);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+    }
+    .why-badge {
+      display:inline-flex;align-items:center;gap:4px;
+      background:rgba(34,211,238,0.1);
+      border:1px solid rgba(34,211,238,0.2);
+      border-radius:99px;
+      padding:3px 10px;
+      font-size:0.6875rem;
+      font-weight:700;
+      color:var(--accent-cyan);
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      margin-bottom: var(--space-sm);
+    }
+    .increase-badge {
+      font-size:1.5rem;font-weight:900;
+      background:linear-gradient(90deg,var(--critical),var(--warning));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .increase-badge.medium {
+      background:linear-gradient(90deg,var(--warning),var(--accent-blue));
+    }
+    .increase-badge.low {
+      background:linear-gradient(90deg,var(--accent-blue),var(--success));
+    }
+    .rank-row {
+      display:flex;align-items:center;gap:var(--space-md);padding:10px 0;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+    }
+    .rank-row:last-child{border-bottom:none}
+    .rank-num {
+      width:24px;height:24px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.75rem;font-weight:700;
+      flex-shrink:0;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item active" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Predictive Intelligence <span>/ AI Forecast</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="global-search" placeholder="Search predictions…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="brain-circuit" style="width:24px;height:24px;color:var(--accent-cyan)"></i> Predictive Intelligence</h1>
+        <p class="page-header-sub">AI-driven hotspot forecasting · Confidence scoring · Why-explanation engine</p>
+      </div>
+      <div class="page-header-actions">
+        <div class="ai-briefing-icon animate-glowCyan" style="width:32px;height:32px;border-radius:var(--radius-md)">
+          <i data-lucide="cpu" style="width:16px;height:16px;color:white"></i>
+        </div>
+        <span class="text-sm text-secondary">Model Accuracy: <strong style="color:var(--accent-cyan)">91.4%</strong></span>
+        <button class="btn btn-primary btn-sm" onclick="window.location.href='reports.html'">
+          <i data-lucide="file-text" style="width:13px;height:13px"></i> Generate Forecast Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Prediction Trend Chart -->
+    <div class="card stagger-item" style="margin-bottom:var(--space-lg)">
+      <div class="card-header">
+        <div class="card-title"><i data-lucide="trending-up" style="width:15px;height:15px;color:var(--critical)"></i> Crime Forecast — Actual vs Predicted</div>
+        <div class="flex items-center gap-md">
+          <span class="flex items-center gap-xs text-xs text-muted"><span style="display:inline-block;width:14px;height:2px;background:var(--accent-blue);border-radius:2px"></span> Actual</span>
+          <span class="flex items-center gap-xs text-xs text-muted"><span style="display:inline-block;width:14px;height:2px;background:var(--critical);border-radius:2px;border-top:1px dashed var(--critical)"></span> Predicted</span>
+        </div>
+      </div>
+      <div style="height:240px"><canvas id="pred-trend-chart"></canvas></div>
+    </div>
+
+    <div class="pred-main">
+      <!-- Prediction Cards -->
+      <div>
+        <div class="section-label" style="margin-bottom:var(--space-md)">Hotspot Predictions — Next 72 Hours</div>
+        <div class="flex flex-col gap-lg" id="prediction-cards"></div>
+      </div>
+
+      <!-- Right: District Risk Ranking -->
+      <div class="flex flex-col gap-lg">
+        <!-- Risk Ranking -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="shield-alert" style="width:15px;height:15px;color:var(--critical)"></i> District Risk Ranking</div>
+          </div>
+          <div id="district-rank-list"></div>
+        </div>
+
+        <!-- AI Model Info -->
+        <div class="card card-accent-cyan">
+          <div class="card-title mb-md"><i data-lucide="cpu" style="width:15px;height:15px;color:var(--accent-cyan)"></i> AI Model Status</div>
+          <div class="flex flex-col gap-sm">
+            <div class="flex justify-between text-sm">
+              <span class="text-muted">Model Version</span>
+              <span class="font-mono text-primary">KSP-PredictV2.1</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-muted">Training Data</span>
+              <span class="text-primary">2020–2025 (5yr)</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-muted">Last Retrained</span>
+              <span class="text-primary">June 30, 2025</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-muted">Features Used</span>
+              <span class="text-primary">47 variables</span>
+            </div>
+            <div class="divider"></div>
+            <div class="flex justify-between text-sm">
+              <span class="text-muted">Overall Accuracy</span>
+              <span style="color:var(--accent-cyan);font-weight:700">91.4%</span>
+            </div>
+            <div class="confidence-gauge">
+              <div class="confidence-track" style="flex:1">
+                <div class="confidence-fill" style="width:91.4%"></div>
+              </div>
+              <span class="confidence-value">91%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini gauge charts -->
+        <div class="card">
+          <div class="card-title mb-md"><i data-lucide="gauge" style="width:15px;height:15px;color:var(--warning)"></i> Risk Gauges</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+            <div id="gauge-blr-container" class="risk-gauge-wrap">
+              <canvas id="gauge-blr" class="gauge-canvas"></canvas>
+              <div class="text-xs text-muted text-center" style="margin-top:-10px">Bengaluru</div>
+              <div style="font-size:1rem;font-weight:800;color:var(--critical)">94</div>
+            </div>
+            <div id="gauge-mys-container" class="risk-gauge-wrap">
+              <canvas id="gauge-mys" class="gauge-canvas"></canvas>
+              <div class="text-xs text-muted text-center" style="margin-top:-10px">Mysuru</div>
+              <div style="font-size:1rem;font-weight:800;color:var(--warning)">78</div>
+            </div>
+            <div id="gauge-blg-container" class="risk-gauge-wrap">
+              <canvas id="gauge-blg" class="gauge-canvas"></canvas>
+              <div class="text-xs text-muted text-center" style="margin-top:-10px">Belagavi</div>
+              <div style="font-size:1rem;font-weight:800;color:var(--warning)">71</div>
+            </div>
+            <div id="gauge-klb-container" class="risk-gauge-wrap">
+              <canvas id="gauge-klb" class="gauge-canvas"></canvas>
+              <div class="text-xs text-muted text-center" style="margin-top:-10px">Kalaburagi</div>
+              <div style="font-size:1rem;font-weight:800;color:var(--warning)">73</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<!-- Phase 3 Services -->
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/hotspot/hotspot-engine.js"></script>
+<script src="../ai/anomaly/anomaly-detector.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../ai/decision/decision-support.js"></script>
+<!-- App scripts -->
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/counters.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+const RISK_COLORS = { critical:'#EF4444', high:'#F59E0B', medium:'#3B82F6', low:'#22C55E' };
+
+function renderAIPredCard(pred, districtName) {
+  const col = RISK_COLORS[pred.riskLevel.toLowerCase()] || '#3B82F6';
+  const factorsHTML = pred.factors.map(f =>
+    `<div class="prediction-factor">${f.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>`
+  ).join('');
+  const recText = pred.recommendations[0]?.action || pred.recommendations[0] || 'Maintain baseline patrol protocols.';
+
+  return `
+    <div class="prediction-card stagger-item" style="border-left:3px solid ${col}">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${col},transparent)"></div>
+      <div class="flex items-start justify-between mb-md">
+        <div>
+          <div class="font-semibold text-base text-primary">${districtName}</div>
+          <div class="text-sm text-muted">${pred.crimeType} · ${pred.horizonLabel}</div>
+        </div>
+        <div class="flex flex-col items-end gap-xs">
+          <span class="risk-badge" style="background:${col}22;color:${col}">${pred.riskLevel}</span>
+          <span style="font-size:1.4rem;font-weight:900;color:${col}">${pred.predictedCount}</span>
+        </div>
+      </div>
+
+      <div class="confidence-gauge mb-md">
+        <span class="text-xs text-muted" style="width:80px">AI Confidence</span>
+        <div class="confidence-track" style="flex:1;margin:0 var(--space-sm)">
+          <div class="confidence-fill" style="width:${Math.round(pred.confidence*100)}%"></div>
+        </div>
+        <span class="confidence-value">${Math.round(pred.confidence*100)}%</span>
+      </div>
+
+      <div class="prediction-why">
+        <div class="why-badge"><i data-lucide="lightbulb" style="width:10px;height:10px"></i> Why this prediction?</div>
+        ${factorsHTML}
+      </div>
+
+      <div style="margin-top:var(--space-md);background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-md)">
+        <div class="text-xs font-semibold text-muted mb-xs uppercase tracking-wide">AI Recommendation</div>
+        <div class="text-sm text-secondary" style="line-height:1.6">${recText}</div>
+      </div>
+
+      <div class="flex gap-sm mt-md">
+        <button class="btn btn-secondary btn-sm flex-1" onclick="window.location.href='heatmap.html'">
+          <i data-lucide="map-pin" style="width:12px;height:12px"></i> View on Map
+        </button>
+        <a href="investigation.html" class="btn btn-primary btn-sm flex-1">
+          <i data-lucide="bot" style="width:12px;height:12px"></i> Analyze
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+  KSPCharts.applyDefaults();
+  KSPCharts.initPredictionChart('pred-trend-chart');
+
+  function renderPredictions() {
+    // ── AI-Powered Prediction Cards ────────────────
+    const predContainer = document.getElementById('prediction-cards');
+    if (predContainer && window.KSPCrimePredictor) {
+      const topDistricts = KSPCrimePredictor.getTopRiskDistricts('week', 5);
+      predContainer.innerHTML = topDistricts.map(p => renderAIPredCard(p, p.district)).join('');
+      lucide.createIcons({ nodes: [predContainer] });
+    }
+
+    // ── District Risk Ranking (AI-Computed) ────────
+    const rankList = document.getElementById('district-rank-list');
+    if (rankList) {
+      const districts = [
+        'Bengaluru Urban','Mysuru','Belagavi','Kalaburagi','Hubballi-Dharwad',
+        'Davanagere','Tumakuru','Mangaluru'
+      ];
+      const ranked = districts.map(name => {
+        const risk = KSPRiskEngine.calculateDistrictRisk(name);
+        return { name, score: risk.score, level: risk.level };
+      }).sort((a,b) => b.score - a.score);
+
+      rankList.innerHTML = ranked.map((d, i) => {
+        const color = RISK_COLORS[d.level] || '#3B82F6';
+        return `
+          <div class="rank-row">
+            <div class="rank-num" style="background:${color}22;color:${color}">${i+1}</div>
+            <div style="flex:1;min-width:0">
+              <div class="text-sm font-semibold text-primary" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name}</div>
+              <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:99px;margin-top:4px;overflow:hidden">
+                <div style="width:${d.score}%;height:100%;background:${color};border-radius:99px;transition:width 1.2s"></div>
+              </div>
+            </div>
+            <span style="font-family:var(--font-mono);font-size:0.875rem;color:${color};font-weight:700;flex-shrink:0">${d.score}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ── Live-Computed Risk Gauges ───────────────────
+    const gaugeDistricts = ['Bengaluru Urban','Mysuru','Belagavi','Kalaburagi'];
+    const gaugeIds = ['gauge-blr','gauge-mys','gauge-blg','gauge-klb'];
+    const gaugeValueIds = ['gauge-blr-container','gauge-mys-container','gauge-blg-container','gauge-klb-container'];
+
+    gaugeDistricts.forEach((d, i) => {
+      const risk = KSPRiskEngine.calculateDistrictRisk(d);
+      KSPCharts.initRiskGaugeChart(gaugeIds[i], risk.score);
+      const container = document.getElementById(gaugeValueIds[i]);
+      if (container) {
+        const valEl = container.querySelector('div[style*="font-size:1rem"]');
+        if (valEl) {
+          valEl.textContent = risk.score;
+          valEl.style.color = RISK_COLORS[risk.level] || '#3B82F6';
+        }
+      }
+    });
+
+    // ── Stagger animations ─────────────────────────
+    setTimeout(() => {
+      document.querySelectorAll('.stagger-item').forEach((el,i) => {
+        setTimeout(() => el.classList.add('visible'), i*80);
+      });
+    }, 100);
+  }
+
+  window.addEventListener('ksp_db_update', renderPredictions);
+  renderPredictions();
+});
+</script>
+</body>
+</html>

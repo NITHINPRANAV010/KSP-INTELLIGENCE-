@@ -1,0 +1,448 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Criminal Digital Footprint â€” KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <style>
+    .footprint-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr 300px;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 140px);
+    }
+    @media(max-width:1440px){ .footprint-layout{grid-template-columns:260px 1fr} .fp-right{display:none} }
+    @media(max-width:1024px){ .footprint-layout{grid-template-columns:1fr} .fp-left{display:none} }
+
+    .fp-panel {
+      background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .fp-head { padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--border);flex-shrink:0; }
+    .fp-body { flex:1;overflow-y:auto;padding:var(--space-md); }
+
+    .offender-card {
+      border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-md);
+      margin-bottom:var(--space-sm);cursor:pointer;transition:all 0.2s;
+    }
+    .offender-card:hover { background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.12); }
+    .offender-card.selected { background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.3); }
+
+    .risk-score-ring {
+      width:56px;height:56px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.8rem;font-weight:900;flex-shrink:0;position:relative;
+    }
+    .risk-score-ring::before {
+      content:'';position:absolute;inset:3px;border-radius:50%;background:var(--card-bg);
+    }
+    .risk-score-ring span { position:relative;z-index:1; }
+
+    #relationship-graph { width:100%;height:100%;background:radial-gradient(ellipse at center,rgba(59,130,246,0.04) 0%,transparent 70%); }
+
+    .info-row {
+      display:flex;gap:var(--space-sm);padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+      align-items:flex-start;
+    }
+    .info-row:last-child { border-bottom:none; }
+    .info-label { font-size:0.7rem;color:var(--text-muted);width:100px;flex-shrink:0;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;padding-top:1px; }
+    .info-val { font-size:0.8125rem;color:var(--text-primary);flex:1;line-height:1.5; }
+
+    .risk-evolution-bar {
+      height:32px;border-radius:var(--radius-md);overflow:hidden;
+      display:flex;align-items:stretch;margin-bottom:var(--space-sm);
+    }
+    .risk-seg {
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.6rem;font-weight:700;color:rgba(255,255,255,0.8);
+      transition:flex 0.5s ease;
+    }
+
+    .movement-timeline-item {
+      display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+    }
+    .movement-timeline-item:last-child{border-bottom:none;}
+    .mtl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+    .mtl-line{position:absolute;left:4px;top:14px;bottom:-8px;width:2px;background:rgba(255,255,255,0.06);}
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <a class="nav-item" href="serial-crimes.html"><span class="nav-icon"><i data-lucide="link-2"></i></span><span class="nav-label">Serial Crimes</span></a>
+      <a class="nav-item active" href="digital-footprint.html"><span class="nav-icon"><i data-lucide="fingerprint"></i></span><span class="nav-label">Digital Footprint</span></a>
+      <div class="nav-section-label">Command</div>
+      <a class="nav-item" href="commander.html"><span class="nav-icon"><i data-lucide="shield-alert"></i></span><span class="nav-label">Commander Briefing</span></a>
+      <a class="nav-item" href="resource-ai.html"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Resource AI</span></a>
+      <a class="nav-item" href="case-priority.html"><span class="nav-icon"><i data-lucide="list-ordered"></i></span><span class="nav-label">Case Priority AI</span></a>
+      <a class="nav-item" href="cascade.html"><span class="nav-icon"><i data-lucide="activity"></i></span><span class="nav-label">Crime Cascade</span></a>
+      <a class="nav-item" href="event-monitor.html"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Event Monitor</span></a>
+      <a class="nav-item" href="scenario.html"><span class="nav-icon"><i data-lucide="flask-conical"></i></span><span class="nav-label">AI Scenario Sim</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" style="width:16px;height:16px"></i><span style="font-size:0.75rem">Collapse</span></button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Criminal Digital Footprint <span>/ 360Â° Profile Intelligence</span></div>
+    <div class="topnav-actions">
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--success)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulseDot 1.5s ease infinite"></div>LIVE
+      </div>
+      <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP Â· Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content">
+    <div style="background:linear-gradient(90deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.25);border-radius:var(--radius-md);padding:10px 16px;display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md);flex-wrap:wrap">
+      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
+      <a href="../index.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">Dashboard</a>
+      <a href="serial-crimes.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">Serial Crimes</a>
+      <a href="digital-footprint.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.4);color:var(--text-primary);text-decoration:none">ðŸ‘£ Digital Footprint</a>
+      <a href="commander.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">Commander</a>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="fingerprint" style="width:24px;height:24px;color:#a78bfa"></i> Criminal Digital Footprint</h1>
+        <p class="page-header-sub">360Â° Profile â€” Associates, Vehicles, Financials, Movement Timeline & Relationship Graph</p>
+      </div>
+      <div style="display:flex;gap:var(--space-sm)">
+        <button class="btn btn-ghost"><i data-lucide="search" style="width:14px;height:14px"></i> Search Profile</button>
+        <button class="btn btn-primary" onclick="window.print()"><i data-lucide="file-down" style="width:14px;height:14px"></i> Export Profile</button>
+      </div>
+    </div>
+
+    <div class="footprint-layout">
+      <!-- LEFT: Offender List -->
+      <div class="fp-panel fp-left">
+        <div class="fp-head">
+          <div style="font-weight:700;font-size:0.8125rem;margin-bottom:8px">Offender Profiles</div>
+          <input type="text" class="form-control" placeholder="Search name, ID..." style="font-size:0.8rem;padding:6px 10px">
+        </div>
+        <div class="fp-body" id="offender-list"></div>
+      </div>
+
+      <!-- CENTER: Relationship Graph + Details -->
+      <div class="fp-panel" style="overflow:hidden">
+        <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0">
+          <button class="workspace-tab-btn active" onclick="showTab('graph',this)" style="flex:1;text-align:center;padding:10px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border:none;background:transparent;color:var(--accent-blue);border-bottom:2px solid var(--accent-blue);cursor:pointer">Relationship Graph</button>
+          <button class="workspace-tab-btn" onclick="showTab('timeline',this)" style="flex:1;text-align:center;padding:10px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border:none;background:transparent;color:var(--text-muted);border-bottom:2px solid transparent;cursor:pointer">Movement Timeline</button>
+          <button class="workspace-tab-btn" onclick="showTab('profile',this)" style="flex:1;text-align:center;padding:10px;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;border:none;background:transparent;color:var(--text-muted);border-bottom:2px solid transparent;cursor:pointer">Full Profile</button>
+        </div>
+        <div id="tab-graph" style="flex:1;overflow:hidden;height:0;min-height:0">
+          <svg id="relationship-graph"></svg>
+        </div>
+        <div id="tab-timeline" style="flex:1;overflow-y:auto;padding:var(--space-md);display:none"></div>
+        <div id="tab-profile" style="flex:1;overflow-y:auto;padding:var(--space-md);display:none"></div>
+      </div>
+
+      <!-- RIGHT: Profile Details -->
+      <div class="fp-panel fp-right">
+        <div class="fp-head"><div style="font-weight:700;font-size:0.8125rem">Profile Details</div></div>
+        <div class="fp-body" id="profile-panel"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+  function updateTime(){const el=document.getElementById('topnav-time');if(el)el.textContent=new Date().toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});}
+  updateTime();setInterval(updateTime,1000);
+  document.getElementById('sidebar-toggle')?.addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('collapsed'));
+
+  const offenders = [
+    {
+      id:'KSP-2024-00781', name:'Ravi Kumar Naik', age:34, risk:92,
+      color:'#ef4444',
+      aliases:['Ravi Bhai','RKN'],
+      photo:'RKN',
+      crimes:['Gang Violence','Arms Possession','Extortion','Vehicle Theft'],
+      cases:12, arrests:3, lastSeen:'Jul 11, Bidar',
+      addresses:['Bidar Old Town, Near Shri Guru Dattatraya Temple','Bengaluru, Shivajinagar (safe house)'],
+      phones:['9876-XXXXXX','8877-XXXXXX (SIM card changed Jul 10)'],
+      vehicles:['KA-32-AB-1234 (Honda Activa, White)','MH-12-AB-5678 (Maruti Suzuki, stolen)'],
+      financials:['HDFC A/C linked: â‚¹4.2 lakh suspicious transactions','2 shell companies: Naik Enterprises, Sai Traders'],
+      associates:['Suresh Yadav (financial link)','Mohan Gowda (driver, associate)','Pradeep Singh (Goa connection)'],
+      riskEvolution:[45,52,61,58,72,79,85,92],
+      movement:[
+        {date:'Jul 12 09:30AM',loc:'Bidar Bus Stand',note:'Spotted by CI'},
+        {date:'Jul 11 08:00PM',loc:'NH-65 Near Bidar',note:'Vehicle KA-32-AB-1234 sighted'},
+        {date:'Jul 10 03:00PM',loc:'Bengaluru Shivajinagar',note:'Phone tower ping'},
+        {date:'Jul 9 11:00AM',loc:'Bidar Old Town',note:'Bank CCTV captured'},
+        {date:'Jul 7 07:00PM',loc:'Gulbarga',note:'Associate meeting reported'},
+        {date:'Jul 5 10:00AM',loc:'Bidar',note:'Last arrest location'},
+      ],
+      nodes:[
+        {id:'self',label:'Ravi Kumar\nNaik',color:'#ef4444',size:24,fx:240,fy:220},
+        {id:'a1',label:'Suresh\nYadav',color:'#f59e0b',size:16,fx:160,fy:120},
+        {id:'a2',label:'Mohan\nGowda',color:'#f59e0b',size:14,fx:330,fy:130},
+        {id:'a3',label:'Pradeep\nSingh',color:'#3b82f6',size:14,fx:160,fy:320},
+        {id:'c1',label:'Case\nFIR-781',color:'#a78bfa',size:12,fx:380,fy:280},
+        {id:'c2',label:'Case\nFIR-643',color:'#a78bfa',size:12,fx:340,fy:350},
+        {id:'v1',label:'KA-32-AB\n1234',color:'#22c55e',size:12,fx:120,fy:240},
+      ],
+      links:[
+        {source:'self',target:'a1',label:'Financial'},
+        {source:'self',target:'a2',label:'Associate'},
+        {source:'self',target:'a3',label:'Cross-state'},
+        {source:'self',target:'c1',label:'Accused'},
+        {source:'self',target:'c2',label:'Accused'},
+        {source:'self',target:'v1',label:'Owns'},
+        {source:'a1',target:'a3',label:'Partner'},
+      ]
+    },
+    {
+      id:'KSP-2024-00432', name:'Lakshmi Devi S.', age:28, risk:67,
+      color:'#f59e0b',
+      aliases:['Lachu','LD'],
+      photo:'LD',
+      crimes:['UPI Fraud','Identity Theft','Money Mule'],
+      cases:5, arrests:1, lastSeen:'Jul 9, Tumkuru',
+      addresses:['Tumkuru, T.P. Road Colony'],
+      phones:['7654-XXXXXX'],
+      vehicles:['KA-06-MN-8765 (Scooty)'],
+      financials:['5 bank accounts across different banks','â‚¹12.8 lakh fraudulent transfers identified'],
+      associates:['Unknown technical expert','Rajesh B. (handler)'],
+      riskEvolution:[20,25,35,40,52,60,67,67],
+      movement:[
+        {date:'Jul 9 02:00PM',loc:'Tumkuru SBI Branch',note:'Cash withdrawal â‚¹45,000'},
+        {date:'Jul 7 10:00AM',loc:'Bengaluru Majestic',note:'Met unknown individual'},
+        {date:'Jul 5 04:00PM',loc:'Tumkuru',note:'Phone activity peak'},
+      ],
+      nodes:[
+        {id:'self',label:'Lakshmi\nDevi S.',color:'#f59e0b',size:22,fx:240,fy:220},
+        {id:'a1',label:'Rajesh B.\n(Handler)',color:'#ef4444',size:16,fx:160,fy:130},
+        {id:'a2',label:'Unknown\nExpert',color:'#6b7280',size:14,fx:330,fy:130},
+        {id:'c1',label:'Fraud\nFIR-432',color:'#a78bfa',size:12,fx:330,fy:310},
+        {id:'v1',label:'5 Bank\nAccounts',color:'#22c55e',size:14,fx:140,fy:300},
+      ],
+      links:[
+        {source:'self',target:'a1',label:'Handler'},
+        {source:'self',target:'a2',label:'Technical'},
+        {source:'self',target:'c1',label:'Accused'},
+        {source:'self',target:'v1',label:'Controls'},
+        {source:'a1',target:'a2',label:'Linked'},
+      ]
+    }
+  ];
+
+  let selected = offenders[0];
+
+  function renderOffenderList() {
+    const el = document.getElementById('offender-list');
+    el.innerHTML = offenders.map((o,i)=>`
+      <div class="offender-card ${i===0?'selected':''}" onclick="selectOffender(${i})">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="risk-score-ring" style="background:conic-gradient(${o.color} ${o.risk*3.6}deg,rgba(255,255,255,0.06) 0deg)">
+            <span style="font-size:0.75rem;font-weight:900;color:${o.color}">${o.risk}</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:0.8125rem;color:var(--text-primary)">${o.name}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted)">${o.id}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted)">${o.crimes[0]} Â· ${o.cases} cases</div>
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function selectOffender(idx) {
+    selected = offenders[idx];
+    document.querySelectorAll('.offender-card').forEach((c,i)=>c.classList.toggle('selected',i===idx));
+    renderGraph();
+    renderTimeline();
+    renderProfile();
+    renderRightPanel();
+  }
+
+  function showTab(tab, btn) {
+    ['graph','timeline','profile'].forEach(t=>{
+      document.getElementById('tab-'+t).style.display = t===tab?(t==='graph'?'block':'block'):'none';
+    });
+    document.querySelectorAll('.workspace-tab-btn').forEach(b=>{
+      b.style.color = 'var(--text-muted)';
+      b.style.borderBottom = '2px solid transparent';
+    });
+    btn.style.color = 'var(--accent-blue)';
+    btn.style.borderBottom = '2px solid var(--accent-blue)';
+    if(tab==='graph') { document.getElementById('tab-graph').style.display='block'; setTimeout(renderGraph,50); }
+  }
+
+  function renderGraph() {
+    const svg = d3.select('#relationship-graph');
+    svg.selectAll('*').remove();
+    const el = document.getElementById('tab-graph');
+    const W = el.clientWidth||600, H = el.clientHeight||400;
+    svg.attr('width',W).attr('height',H);
+
+    const nodes = selected.nodes.map(n=>({...n}));
+    const links = selected.links.map(l=>({...l}));
+
+    const sim = d3.forceSimulation(nodes)
+      .force('link',d3.forceLink(links).id(d=>d.id).distance(100))
+      .force('charge',d3.forceManyBody().strength(-300))
+      .force('center',d3.forceCenter(W/2,H/2))
+      .force('collision',d3.forceCollide(40));
+
+    // Gradient defs
+    const defs = svg.append('defs');
+    defs.append('marker').attr('id','arrow').attr('viewBox','0 -5 10 10').attr('refX',20).attr('refY',0).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+      .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','rgba(255,255,255,0.2)');
+
+    const link = svg.append('g').selectAll('line').data(links).enter().append('line')
+      .attr('stroke','rgba(255,255,255,0.12)').attr('stroke-width',1.5).attr('marker-end','url(#arrow)');
+
+    const linkLabel = svg.append('g').selectAll('text').data(links).enter().append('text')
+      .attr('font-size',9).attr('fill','rgba(255,255,255,0.3)').attr('text-anchor','middle').text(d=>d.label);
+
+    const node = svg.append('g').selectAll('circle').data(nodes).enter().append('circle')
+      .attr('r',d=>d.size).attr('fill',d=>d.color+'33').attr('stroke',d=>d.color).attr('stroke-width',2)
+      .call(d3.drag().on('start',ds).on('drag',dd).on('end',de));
+
+    const label = svg.append('g').selectAll('text').data(nodes).enter().append('text')
+      .attr('font-size',10).attr('fill','rgba(255,255,255,0.8)').attr('text-anchor','middle')
+      .attr('dy','0.35em').text(d=>d.label.split('\n')[0]);
+
+    sim.on('tick',()=>{
+      link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+      linkLabel.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2);
+      node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+      label.attr('x',d=>d.x).attr('y',d=>d.y+d.size+12);
+    });
+
+    function ds(e,d){if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;}
+    function dd(e,d){d.fx=e.x;d.fy=e.y;}
+    function de(e,d){if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}
+  }
+
+  function renderTimeline() {
+    const el = document.getElementById('tab-timeline');
+    el.innerHTML = `
+      <div style="font-weight:700;font-size:0.875rem;margin-bottom:var(--space-md)">Movement Timeline â€” ${selected.name}</div>
+      ${selected.movement.map((m,i)=>`
+        <div class="movement-timeline-item" style="position:relative">
+          ${i<selected.movement.length-1?'<div class="mtl-line"></div>':''}
+          <div class="mtl-dot" style="background:${selected.color}"></div>
+          <div style="flex:1">
+            <div style="font-size:0.75rem;font-weight:700;color:var(--text-primary)">${m.loc}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted)">${m.date}</div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px">${m.note}</div>
+          </div>
+        </div>`).join('')}`;
+  }
+
+  function renderProfile() {
+    const o = selected;
+    document.getElementById('tab-profile').innerHTML = `
+      <div style="font-weight:700;font-size:0.875rem;margin-bottom:var(--space-md)">Full Profile â€” ${o.name}</div>
+      <div class="info-row"><div class="info-label">ID</div><div class="info-val font-mono" style="font-size:0.75rem;color:var(--accent-cyan)">${o.id}</div></div>
+      <div class="info-row"><div class="info-label">Aliases</div><div class="info-val">${o.aliases.join(', ')}</div></div>
+      <div class="info-row"><div class="info-label">Age</div><div class="info-val">${o.age} years</div></div>
+      <div class="info-row"><div class="info-label">Crimes</div><div class="info-val">${o.crimes.map(c=>`<span style="display:inline-block;padding:2px 8px;border-radius:99px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);font-size:0.7rem;color:var(--critical);margin:2px">${c}</span>`).join('')}</div></div>
+      <div class="info-row"><div class="info-label">Addresses</div><div class="info-val">${o.addresses.map(a=>`<div style="margin-bottom:4px">ðŸ“ ${a}</div>`).join('')}</div></div>
+      <div class="info-row"><div class="info-label">Phones</div><div class="info-val">${o.phones.map(p=>`<div>ðŸ“± ${p}</div>`).join('')}</div></div>
+      <div class="info-row"><div class="info-label">Vehicles</div><div class="info-val">${o.vehicles.map(v=>`<div>ðŸš— ${v}</div>`).join('')}</div></div>
+      <div class="info-row"><div class="info-label">Financials</div><div class="info-val">${o.financials.map(f=>`<div style="margin-bottom:4px">ðŸ’° ${f}</div>`).join('')}</div></div>
+      <div class="info-row"><div class="info-label">Associates</div><div class="info-val">${o.associates.map(a=>`<div>ðŸ¤ ${a}</div>`).join('')}</div></div>`;
+  }
+
+  function renderRightPanel() {
+    const o = selected;
+    document.getElementById('profile-panel').innerHTML = `
+      <div style="text-align:center;padding:var(--space-md);border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:var(--space-md)">
+        <div style="width:64px;height:64px;border-radius:50%;background:${o.color}22;border:2px solid ${o.color};display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-sm);font-weight:900;font-size:1.25rem;color:${o.color}">${o.photo}</div>
+        <div style="font-weight:800;font-size:0.9375rem">${o.name}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">Age ${o.age} Â· ${o.cases} Known Cases</div>
+        <div style="display:flex;align-items:center;gap:6px;justify-content:center;margin-top:8px">
+          <div style="font-size:0.75rem;font-weight:800;color:${o.color}">Risk Score: ${o.risk}/100</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:var(--space-md)">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text-primary);margin-bottom:8px">Risk Evolution</div>
+        <canvas id="risk-evo-chart" height="80"></canvas>
+      </div>
+
+      <div style="margin-bottom:var(--space-md)">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--text-primary);margin-bottom:6px">Quick Stats</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="padding:8px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);text-align:center">
+            <div style="font-size:1.25rem;font-weight:900;color:${o.color}">${o.cases}</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">CASES</div>
+          </div>
+          <div style="padding:8px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);text-align:center">
+            <div style="font-size:1.25rem;font-weight:900;color:var(--warning)">${o.arrests}</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">ARRESTS</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-md);padding:var(--space-md)">
+        <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:6px">ðŸ¤– AI RISK ASSESSMENT</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6">Risk score is <strong style="color:${o.color}">${o.risk}/100 (${o.risk>80?'CRITICAL':o.risk>60?'HIGH':'MEDIUM'})</strong>. Increased activity detected in last 7 days. Recommend <strong>surveillance escalation</strong> and preventive detention review.</div>
+      </div>
+    `;
+    
+    // Risk chart
+    setTimeout(()=>{
+      const ctx = document.getElementById('risk-evo-chart');
+      if(!ctx) return;
+      new Chart(ctx.getContext('2d'),{
+        type:'line',
+        data:{
+          labels:['Jan','Feb','Mar','Apr','May','Jun','Jul','Now'],
+          datasets:[{label:'Risk Score',data:o.riskEvolution,borderColor:o.color,backgroundColor:o.color+'22',borderWidth:2,fill:true,tension:0.4,pointRadius:3}]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(255,255,255,0.4)',font:{size:9}}},x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.4)',font:{size:9}}}}}
+      });
+    },100);
+  }
+
+  // Init
+  renderOffenderList();
+  renderGraph();
+  renderTimeline();
+  renderProfile();
+  renderRightPanel();
+
+  // Graph tab default visible
+  document.getElementById('tab-graph').style.display='block';
+  document.getElementById('tab-graph').style.flex='1';
+  document.getElementById('tab-graph').style.overflow='hidden';
+  document.getElementById('tab-graph').style.height='100%';
+</script>
+
+<script src="../js/ai-intelligence-overlay.js"></script>
+</body>
+</html>
+
+
+

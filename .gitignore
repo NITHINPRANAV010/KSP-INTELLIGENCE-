@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.venv
+venv/
+env/
+
+# Node
+node_modules/
+npm-debug.log
+.npm
+
+# Database & sensitive files
+*.db
+*.sqlite
+*.sqlite3
+ksp.db
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Temp / scratch files
+scratch/
+*.tmp
+*.bak
+
+# Docker secrets
+.env.prod
+.env.local
+secrets/

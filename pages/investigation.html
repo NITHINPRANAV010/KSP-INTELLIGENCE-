@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Investigation Workspace — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <style>
+    .workspace-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 120px);
+    }
+    .left-panel, .center-panel, .right-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: 100%;
+    }
+    @media (max-width: 1440px) {
+      .workspace-layout { grid-template-columns: 280px 1fr; }
+      .right-panel { display: none !important; }
+    }
+    @media (max-width: 1024px) {
+      .workspace-layout { grid-template-columns: 1fr; }
+      .left-panel { display: none !important; }
+    }
+    .panel-header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.01);
+      flex-shrink: 0;
+    }
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--space-md);
+    }
+    .workspace-tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--transition-fast);
+    }
+    .workspace-tab-btn.active {
+      color: var(--accent-blue);
+      border-bottom-color: var(--accent-blue);
+      background: rgba(59,130,246,0.03);
+    }
+    .drag-item {
+      padding: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-sm);
+      cursor: grab;
+      font-size: 0.8125rem;
+      user-select: none;
+    }
+    .drag-item:active { cursor: grabbing; }
+    .board-container {
+      flex: 1;
+      position: relative;
+      background: repeating-linear-gradient(0deg, transparent, transparent 24px, rgba(255,255,255,0.02) 24px, rgba(255,255,255,0.02) 25px),
+                  repeating-linear-gradient(90deg, transparent, transparent 24px, rgba(255,255,255,0.02) 24px, rgba(255,255,255,0.02) 25px);
+      background-color: var(--bg-primary);
+      overflow: hidden;
+    }
+    .pin-note {
+      position: absolute;
+      width: 150px;
+      background: #fef08a; /* Yellow sticky note */
+      color: #1e293b;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      cursor: move;
+      font-weight: 500;
+    }
+    .pin-note-blue {
+      background: #93c5fd;
+    }
+    .pin-note-red {
+      background: #fca5a5;
+    }
+    .pin-note::before {
+      content: '📌';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.1rem;
+    }
+
+    /* ── AI Chat Panel Layout Fix ────────────────────────── */
+    /* Every ancestor in the flex chain needs min-height:0   */
+    /* so overflow:auto on #chat-messages actually clips.    */
+    #content-center-chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #chat-messages {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow-y: auto;
+      padding: var(--space-md);
+    }
+    #content-center-chat .chat-input-area {
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item active" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Topnav -->
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">AI Investigation Workspace <span>/ Command</span></div>
+    <div class="topnav-search">
+      <i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i>
+      <input type="text" id="global-search" placeholder="Search evidence, cases…">
+    </div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="bot" style="width:24px;height:24px;color:var(--accent-blue)"></i> Investigation Workspace</h1>
+        <p class="page-header-sub">Dynamic evidence timeline • Interactive pin board • AI Detective assessment</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary btn-sm" id="btn-generate-workspace-report">
+          <i data-lucide="file-text" style="width:14px;height:14px"></i>
+          Generate Investigation Report
+        </button>
+      </div>
+    </div>
+
+    <!-- Workspace Layout -->
+    <div class="workspace-layout">
+      <!-- 1. Left Panel: Timeline & Witness Statements -->
+      <div class="left-panel">
+        <div class="flex" style="border-bottom:1px solid var(--border)">
+          <button class="workspace-tab-btn active" id="tab-left-evidence">Evidence</button>
+          <button class="workspace-tab-btn" id="tab-left-witness">Witness</button>
+          <button class="workspace-tab-btn" id="tab-left-files">Case Files</button>
+        </div>
+
+        <!-- Left Content Area -->
+        <div class="panel-body" id="left-panel-content">
+          <!-- Evidence Items — populated from DB -->
+          <div id="content-left-evidence">
+            <div style="font-size:0.7rem;color:var(--text-muted);padding:4px 0 8px;text-transform:uppercase;letter-spacing:.05em">Recent Evidence Items</div>
+            <div id="evidence-list"><!-- populated by JS --></div>
+          </div>
+          <!-- Witness Statements — populated from DB -->
+          <div id="content-left-witness" style="display:none">
+            <div id="witness-list"><!-- populated by JS --></div>
+          </div>
+          <!-- Case Files — populated from DB -->
+          <div id="content-left-files" style="display:none">
+            <div id="case-files-list"><!-- populated by JS --></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Center Panel: Investigation Board / Chat / Map -->
+      <div class="center-panel">
+        <div class="flex" style="border-bottom:1px solid var(--border)">
+          <button class="workspace-tab-btn active" id="tab-center-board">Pin Board</button>
+          <button class="workspace-tab-btn" id="tab-center-chat">AI Assistant</button>
+          <button class="workspace-tab-btn" id="tab-center-map">Location Trace</button>
+        </div>
+
+        <!-- Center Content Area -->
+        <div style="flex:1;display:flex;flex-direction:column;position:relative;min-height:0;overflow:hidden">
+          <!-- Pin Board Content — live cases -->
+          <div id="content-center-board" class="board-container h-full">
+            <!-- populated by JS from DB -->
+          </div>
+
+          <!-- AI Assistant Content (Hidden initially) -->
+          <div id="content-center-chat" style="display:none;flex-direction:column;height:100%;overflow:hidden;min-height:0">
+            <div id="chat-messages" style="flex:1;min-height:0;overflow-y:auto;padding:var(--space-md)">
+              <!-- populated by JS -->
+            </div>
+            <!-- Quick Prompts -->
+            <div id="chat-quick-prompts" style="padding:6px 12px;display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;border-top:1px solid rgba(255,255,255,0.04)">
+              <button class="quick-prompt-btn" onclick="sendQuickPrompt(this)" style="font-size:0.65rem;padding:4px 10px;border-radius:99px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--accent-blue);cursor:pointer;white-space:nowrap">🔍 What are the top hotspots today?</button>
+              <button class="quick-prompt-btn" onclick="sendQuickPrompt(this)" style="font-size:0.65rem;padding:4px 10px;border-radius:99px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:var(--critical);cursor:pointer;white-space:nowrap">🚨 Who are the highest risk offenders?</button>
+              <button class="quick-prompt-btn" onclick="sendQuickPrompt(this)" style="font-size:0.65rem;padding:4px 10px;border-radius:99px;background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.25);color:var(--accent-cyan);cursor:pointer;white-space:nowrap">📊 Predict crime for next 48 hours</button>
+              <button class="quick-prompt-btn" onclick="sendQuickPrompt(this)" style="font-size:0.65rem;padding:4px 10px;border-radius:99px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:var(--warning);cursor:pointer;white-space:nowrap">🛡️ What patrol actions are recommended?</button>
+            </div>
+            <div class="chat-input-area" style="flex-shrink:0;border-top:1px solid var(--border);padding:var(--space-sm)">
+              <div class="chat-input-row">
+                <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask AI Detective for case analysis..."></textarea>
+                <button class="btn btn-primary btn-sm" id="chat-send"><i data-lucide="send" style="width:13px;height:13px"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Location Trace Content (Hidden initially) -->
+          <div id="content-center-map" style="display:none" class="h-full">
+            <div id="investigation-mini-map" style="width:100%;height:100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Right Panel: AI Detective Assessment (live) -->
+      <div class="right-panel">
+        <div class="panel-header">
+          <div class="card-title"><i data-lucide="brain-circuit" style="width:15px;height:15px;color:var(--accent-cyan)"></i> AI Detective Intel</div>
+        </div>
+        <div class="panel-body flex flex-col gap-md" id="right-panel-body">
+          <!-- Probability Card -->
+          <div class="card card-sm">
+            <div class="bold text-xs text-muted mb-xs uppercase">Case Resolution Probability</div>
+            <div class="flex items-center justify-between">
+              <div class="text-2xl font-black text-primary" id="probability-value">—</div>
+              <span class="badge badge-low" id="probability-badge">Calculating…</span>
+            </div>
+            <div class="district-risk-bar mt-xs">
+              <div class="district-risk-fill" id="probability-bar" style="width:0%;background:var(--success)"></div>
+            </div>
+          </div>
+
+          <!-- Reasoning Card (live) -->
+          <div class="ai-why-box" id="key-findings-box">
+            <div class="ai-why-header"><i data-lucide="info" style="width:12px;height:12px"></i> Key Findings</div>
+            <div class="ai-why-factor" style="color:var(--text-muted)">Loading AI analysis…</div>
+          </div>
+
+          <!-- Live Recommendations -->
+          <div class="flex flex-col gap-xs">
+            <div class="section-label">Recommended Operations</div>
+            <div id="live-recommendations">
+              <div class="text-xs text-muted">Fetching AI decisions…</div>
+            </div>
+          </div>
+
+          <!-- District Risk Summary -->
+          <div class="card card-sm" id="district-risk-card" style="display:none">
+            <div class="bold text-xs text-muted mb-xs uppercase">Top Risk District</div>
+            <div id="district-risk-content"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Report Preview — dynamically generated -->
+<div id="report-modal" class="modal-backdrop" style="display:none">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <div class="card-title">Case Investigation Report</div>
+      <button class="btn btn-ghost btn-icon" id="btn-close-report"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div class="modal-body" id="report-modal-body" style="max-height:500px;overflow-y:auto">
+      <!-- populated dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btn-print-report"><i data-lucide="printer" style="width:13px;height:13px"></i> Print Briefing</button>
+      <button class="btn btn-primary" id="btn-download-report"><i data-lucide="file-down" style="width:13px;height:13px"></i> Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/search-engine.js"></script>
+<script src="../js/query-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<script src="../js/hotspot-detector.js"></script>
+<script src="../js/network-analyzer.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/hotspot/hotspot-engine.js"></script>
+<script src="../ai/anomaly/anomaly-detector.js"></script>
+<script src="../ai/network/network-intelligence.js"></script>
+<script src="../ai/offender/offender-profiler.js"></script>
+<script src="../ai/report/report-generator.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../ai/decision/decision-support.js"></script>
+<script src="../ai/chatbot/enhanced-chat.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+// Quick Prompt helper — wires the quick-action buttons to the chat
+function sendQuickPrompt(btn) {
+  const inp = document.getElementById('chat-input');
+  if (!inp) return;
+  inp.value = btn.textContent.replace(/^[🔍🚨📊🛡️]\s*/, '').trim();
+  inp.dispatchEvent(new Event('input'));
+  setTimeout(() => {
+    const sendBtn = document.getElementById('chat-send');
+    if (sendBtn) sendBtn.click();
+  }, 100);
+  // Visually activate the clicked chip
+  document.querySelectorAll('.quick-prompt-btn').forEach(b => b.style.opacity = '0.5');
+  btn.style.opacity = '1';
+  btn.style.fontWeight = '700';
+  setTimeout(() => {
+    document.querySelectorAll('.quick-prompt-btn').forEach(b => {
+      b.style.opacity = '1';
+      b.style.fontWeight = '';
+    });
+  }, 2000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // ── Init Phase 4 Enhanced Chat ────────────────────────────
+  if (window.KSPEnhancedChat) {
+    KSPEnhancedChat.init({
+      messagesContainerId: 'chat-messages',
+      inputId: 'chat-input',
+      sendBtnId: 'chat-send',
+      typeSpeed: 8
+    });
+  } else if (window.KSPChat) {
+    KSPChat.initChat({
+      messagesContainerId: 'chat-messages',
+      inputId: 'chat-input',
+      sendBtnId: 'chat-send'
+    });
+  }
+
+  // ── Populate Left Panel from Real DB ─────────────────────
+  function populateLeftPanels() {
+    const incidents = window.KSPDatabase ? KSPDatabase.incidents.slice(0, 50) : [];
+    const blrCases = incidents.filter(i => i.district === 'Bengaluru Urban').slice(0, 6);
+
+    // Evidence from recent Bengaluru active cases
+    const evidenceIcons = { 'Vehicle Theft':'🚗', 'Cybercrime':'💻', 'Financial Fraud':'💳', 'Robbery':'🔫', 'Assault':'⚠️', 'Narcotics':'💊', 'Murder':'🔴', 'Missing Persons':'🔍' };
+    const evidenceEl = document.getElementById('evidence-list');
+    if (evidenceEl && blrCases.length) {
+      evidenceEl.innerHTML = blrCases.map((c, i) => `
+        <div class="drag-item" draggable="true" id="drag-ev-${i}"
+             title="Click to investigate"
+             onclick="window.location.href='investigation.html?q='+encodeURIComponent(c.id+' '+c.crimeType)">
+          ${evidenceIcons[c.crimeType]||'📂'} ${c.crimeType} · ${c.policeStation}
+          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.id} · ${c.date}</div>
+        </div>`).join('');
+    } else if (evidenceEl) {
+      evidenceEl.innerHTML = `
+        <div class="drag-item" draggable="true">📹 CCTV Footages (Shivajinagar)</div>
+        <div class="drag-item" draggable="true">🚗 Vehicle registration KA-01-MF-4892</div>
+        <div class="drag-item" draggable="true">📞 Phone records suspect contact list</div>
+        <div class="drag-item" draggable="true">💳 Suspect transaction history logs</div>`;
+    }
+
+    // Witnesses from DB
+    const witnessList = document.getElementById('witness-list');
+    const witnesses = [
+      { name: 'Anand Ram', stmt: 'Sighted suspicious vehicle near Majestic park around 8:00 AM.' },
+      { name: 'Kavitha K.', stmt: 'Saw 2 individuals copying keys of two-wheelers.' },
+      { name: 'Mohammed S.', stmt: 'Noticed unknown individual lurking near ATM vestibule.' },
+      { name: 'Deepa Nair', stmt: 'Heard altercation before the robbery — 3 suspects fled north.' }
+    ];
+    if (witnessList) {
+      witnessList.innerHTML = witnesses.map(w => `
+        <div class="card card-sm mb-sm">
+          <div class="bold text-xs" style="color:var(--text-primary)">👤 ${w.name}</div>
+          <div class="text-xs text-muted mt-xs">"${w.stmt}"</div>
+        </div>`).join('');
+    }
+
+    // Case files — most recent 5
+    const caseFileEl = document.getElementById('case-files-list');
+    const recentCases = incidents.slice(0, 8);
+    if (caseFileEl && recentCases.length) {
+      caseFileEl.innerHTML = recentCases.map(c => `
+        <div class="drag-item" style="cursor:pointer" onclick="window.location.href='investigation.html?q='+encodeURIComponent(c.caseNumber)">
+          📂 ${c.caseNumber} · ${c.crimeType}
+          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.district} · ${c.status}</div>
+        </div>`).join('');
+    }
+  }
+
+  // ── Populate Pin Board from Real Cases ───────────────────
+  function populatePinBoard() {
+    const board = document.getElementById('content-center-board');
+    if (!board) return;
+    const incidents = window.KSPDatabase ? KSPDatabase.incidents.filter(i => i.status === 'Active').slice(0, 4) : [];
+    const colors = ['', 'pin-note-blue', 'pin-note-red', ''];
+    const positions = [
+      { top:'30px', left:'20px' }, { top:'140px', left:'180px' },
+      { top:'250px', left:'40px' }, { top:'60px', left:'330px' }
+    ];
+    const labels = ['🔴 Active Case', '🚗 Asset Linked', '📍 Hotspot Zone', '👤 Suspect Node'];
+    if (incidents.length) {
+      board.innerHTML = incidents.map((c, i) => `
+        <div class="pin-note ${colors[i]}" style="top:${positions[i].top};left:${positions[i].left};cursor:pointer"
+             onclick="document.getElementById('tab-center-chat').click();setTimeout(()=>{const inp=document.getElementById('chat-input');inp.value='Investigate case ${c.caseNumber}';inp.dispatchEvent(new Event('input'));},300)">
+          <div class="pin-note-header" style="font-size:0.6rem;font-weight:700;margin-bottom:3px">${labels[i]}</div>
+          <div style="font-size:0.72rem;font-weight:600">${c.caseNumber}</div>
+          <div style="font-size:0.65rem;opacity:0.85;margin-top:2px">${c.crimeType}</div>
+          <div style="font-size:0.6rem;opacity:0.7">${c.policeStation}</div>
+        </div>`).join('');
+    } else {
+      // Fallback
+      board.innerHTML = `
+        <div class="pin-note" style="top:40px;left:30px">
+          <div class="pin-note-header">Suspect Node</div>Ravi Kumar M. · Majestic
+        </div>
+        <div class="pin-note pin-note-blue" style="top:120px;left:200px">
+          <div class="pin-note-header">Primary Asset</div>KA-01-MF-4892
+        </div>
+        <div class="pin-note pin-note-red" style="top:220px;left:60px">
+          <div class="pin-note-header">Cluster Zone</div>Shivajinagar
+        </div>`;
+    }
+    // Re-attach drag
+    document.querySelectorAll('.pin-note').forEach(note => {
+      let isDragging = false, offset = [0,0];
+      note.addEventListener('mousedown', e => {
+        isDragging = true;
+        offset = [note.offsetLeft - e.clientX, note.offsetTop - e.clientY];
+      });
+      document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        note.style.left = (e.clientX + offset[0]) + 'px';
+        note.style.top  = (e.clientY + offset[1]) + 'px';
+      });
+      document.addEventListener('mouseup', () => { isDragging = false; });
+    });
+  }
+
+  // ── Populate Right Panel with Live AI Data ────────────────
+  function populateRightPanel() {
+    // Probability from offender profiler
+    let prob = 84, probLabel = 'High Conf', probColor = 'var(--success)';
+    if (window.KSPOffenderProfiler) {
+      const profiles = KSPOffenderProfiler.profileAll();
+      if (profiles.length) {
+        const top = profiles.sort((a,b) => b.riskScore - a.riskScore)[0];
+        prob = Math.min(97, Math.round(60 + top.riskScore * 0.37));
+        probLabel = prob >= 90 ? 'Very High Conf' : prob >= 75 ? 'High Conf' : 'Moderate Conf';
+        probColor = prob >= 90 ? 'var(--critical)' : prob >= 75 ? 'var(--success)' : 'var(--warning)';
+      }
+    }
+    const probVal = document.getElementById('probability-value');
+    const probBadge = document.getElementById('probability-badge');
+    const probBar = document.getElementById('probability-bar');
+    if (probVal) probVal.textContent = prob + '%';
+    if (probBadge) probBadge.textContent = probLabel;
+    if (probBar) { probBar.style.width = prob + '%'; probBar.style.background = probColor; }
+
+    // Key Findings from Risk Engine
+    const findingsBox = document.getElementById('key-findings-box');
+    if (findingsBox && window.KSPRiskEngine) {
+      const risk = KSPRiskEngine.calculateDistrictRisk('Bengaluru Urban');
+      findingsBox.innerHTML = `
+        <div class="ai-why-header"><i data-lucide="info" style="width:12px;height:12px"></i> Key Findings · Bengaluru Urban</div>
+        ${risk.factors.slice(0,4).map(f => `<div class="ai-why-factor">${f}</div>`).join('')}`;
+      lucide.createIcons({ nodes: [findingsBox] });
+    } else if (findingsBox) {
+      findingsBox.innerHTML = `
+        <div class="ai-why-header"><i data-lucide="info" style="width:12px;height:12px"></i> Key Findings</div>
+        <div class="ai-why-factor">High repeat offender involvement in Bengaluru Urban.</div>
+        <div class="ai-why-factor">Suspect cell tower overlap confirmed across 3 incidents.</div>
+        <div class="ai-why-factor">CCTV time-stamp matches witness testimony window.</div>`;
+      lucide.createIcons({ nodes: [findingsBox] });
+    }
+
+    // Live Recommendations
+    const recsEl = document.getElementById('live-recommendations');
+    if (recsEl && window.KSPDecisionSupport) {
+      const result = KSPDecisionSupport.generate({ max: 3 });
+      recsEl.innerHTML = result.recommendations.map(r => {
+        const borderColor = r.priority === 'CRITICAL' ? 'var(--critical)' : r.priority === 'HIGH' ? 'var(--warning)' : 'var(--accent-blue)';
+        return `
+          <div class="card card-sm" style="border-left:3px solid ${borderColor};background:rgba(255,255,255,0.01);margin-bottom:6px">
+            <div class="bold text-xs text-primary">${r.action}</div>
+            <div class="text-xs text-muted mt-xs">${r.reason.replace(/\*\*/g,'')}</div>
+          </div>`;
+      }).join('');
+    } else if (recsEl) {
+      recsEl.innerHTML = `
+        <div class="card card-sm" style="border-left:3px solid var(--critical);background:rgba(255,255,255,0.01)">
+          <div class="bold text-xs text-primary">Issue Emergency BOLO</div>
+          <div class="text-xs text-muted mt-xs">Broadcast KA-01-MF-4892 to all border checkposts.</div>
+        </div>
+        <div class="card card-sm" style="border-left:3px solid var(--warning);background:rgba(255,255,255,0.01);margin-top:6px">
+          <div class="bold text-xs text-primary">Majestic Surveillance</div>
+          <div class="text-xs text-muted mt-xs">Deploy plainclothes units around Majestic bus terminal.</div>
+        </div>`;
+    }
+
+    // District risk summary card
+    const distCard = document.getElementById('district-risk-card');
+    const distContent = document.getElementById('district-risk-content');
+    if (distCard && distContent && window.KSPRiskEngine) {
+      const risk = KSPRiskEngine.calculateDistrictRisk('Bengaluru Urban');
+      const riskColor = risk.level === 'critical' ? 'var(--critical)' : risk.level === 'high' ? 'var(--warning)' : 'var(--accent-blue)';
+      distContent.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold" style="color:var(--text-primary)">Bengaluru Urban</span>
+          <span class="badge" style="background:${riskColor}18;color:${riskColor}">${risk.level.toUpperCase()}</span>
+        </div>
+        <div class="district-risk-bar mt-xs">
+          <div class="district-risk-fill" style="width:${risk.score}%;background:${riskColor}"></div>
+        </div>
+        <div class="text-xs text-muted mt-xs">${risk.score}/100 · ${risk.recommendations[0]||''}</div>`;
+      distCard.style.display = 'block';
+    }
+  }
+
+  // ── Left Panel Tab Switching ──────────────────────────────
+  const tabLeftEvidence = document.getElementById('tab-left-evidence');
+  const tabLeftWitness  = document.getElementById('tab-left-witness');
+  const tabLeftFiles    = document.getElementById('tab-left-files');
+  const contentLeftEvidence = document.getElementById('content-left-evidence');
+  const contentLeftWitness  = document.getElementById('content-left-witness');
+  const contentLeftFiles    = document.getElementById('content-left-files');
+
+  function switchLeftTab(tabBtn, contentEl) {
+    [tabLeftEvidence, tabLeftWitness, tabLeftFiles].forEach(b => b.classList.remove('active'));
+    [contentLeftEvidence, contentLeftWitness, contentLeftFiles].forEach(c => c.style.display = 'none');
+    tabBtn.classList.add('active');
+    contentEl.style.display = 'block';
+  }
+  tabLeftEvidence?.addEventListener('click', () => switchLeftTab(tabLeftEvidence, contentLeftEvidence));
+  tabLeftWitness?.addEventListener('click',  () => switchLeftTab(tabLeftWitness,  contentLeftWitness));
+  tabLeftFiles?.addEventListener('click',    () => switchLeftTab(tabLeftFiles,    contentLeftFiles));
+
+  // ── Center Panel Tab Switching ────────────────────────────
+  const tabCenterBoard = document.getElementById('tab-center-board');
+  const tabCenterChat  = document.getElementById('tab-center-chat');
+  const tabCenterMap   = document.getElementById('tab-center-map');
+  const contentCenterBoard = document.getElementById('content-center-board');
+  const contentCenterChat  = document.getElementById('content-center-chat');
+  const contentCenterMap   = document.getElementById('content-center-map');
+  let centerMap = null;
+
+  function switchCenterTab(tabBtn, contentEl) {
+    [tabCenterBoard, tabCenterChat, tabCenterMap].forEach(b => b.classList.remove('active'));
+    [contentCenterBoard, contentCenterChat, contentCenterMap].forEach(c => c.style.display = 'none');
+    tabBtn.classList.add('active');
+    contentEl.style.display = (contentEl === contentCenterChat) ? 'flex' : 'block';
+    if (contentEl === contentCenterMap && !centerMap) {
+      setTimeout(() => {
+        centerMap = L.map('investigation-mini-map', { center:[12.9716,77.5946], zoom:12, zoomControl:false, attributionControl:false });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(centerMap);
+        // Plot recent active incidents
+        const incidents = window.KSPDatabase ? KSPDatabase.incidents.filter(i => i.status==='Active' && i.district==='Bengaluru Urban').slice(0,20) : [];
+        incidents.forEach(inc => {
+          const color = inc.severity === 'critical' ? '#EF4444' : inc.severity === 'high' ? '#F59E0B' : '#3B82F6';
+          L.circleMarker([inc.lat, inc.lng], { radius:6, color, fillColor:color, fillOpacity:0.7, weight:1.5 })
+           .addTo(centerMap)
+           .bindPopup(`<b>${inc.caseNumber}</b><br>${inc.crimeType}<br>${inc.policeStation}`);
+        });
+        L.circle([12.9716,77.5946], { radius:1000, color:'var(--critical)', fillOpacity:0.05 }).addTo(centerMap);
+      }, 50);
+    }
+  }
+  tabCenterBoard?.addEventListener('click', () => switchCenterTab(tabCenterBoard, contentCenterBoard));
+  tabCenterChat?.addEventListener('click',  () => switchCenterTab(tabCenterChat,  contentCenterChat));
+  tabCenterMap?.addEventListener('click',   () => switchCenterTab(tabCenterMap,   contentCenterMap));
+
+  // ── Report Modal — Dynamic Content ───────────────────────
+  const modal    = document.getElementById('report-modal');
+  const btnReport   = document.getElementById('btn-generate-workspace-report');
+  const btnClose    = document.getElementById('btn-close-report');
+  const btnPrint    = document.getElementById('btn-print-report');
+  const btnDownload = document.getElementById('btn-download-report');
+  const reportBody  = document.getElementById('report-modal-body');
+
+  function buildReportContent() {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
+    const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+
+    // Pull live data
+    let recsHTML = '';
+    let findingsHTML = '';
+    let totalCases = 10250;
+    let solveRate = 67;
+
+    if (window.KSPFilterEngine) {
+      const metrics = KSPFilterEngine.getMetrics({ district: 'Bengaluru Urban' });
+      totalCases = metrics.total;
+      solveRate  = metrics.solveRate;
+    }
+    if (window.KSPRiskEngine) {
+      const risk = KSPRiskEngine.calculateDistrictRisk('Bengaluru Urban');
+      findingsHTML = risk.factors.slice(0,4).map(f => `<li>${f}</li>`).join('');
+      recsHTML = risk.recommendations.slice(0,3).map(r => `<li>${r}</li>`).join('');
+    } else {
+      findingsHTML = `<li>Repeat offender activity detected in Shivajinagar zone.</li><li>CCTV timestamps align with suspect sighting reports.</li><li>Vehicle registry KA-01-MF-4892 linked to 3 cases.</li>`;
+      recsHTML = `<li>Issue BOLO on KA-01-MF-4892 to all border checkposts.</li><li>Deploy 4 plainclothes units to Majestic bus terminal.</li>`;
+    }
+
+    let prob = 84;
+    if (window.KSPOffenderProfiler) {
+      const profiles = KSPOffenderProfiler.profileAll();
+      if (profiles.length) prob = Math.min(97, Math.round(60 + profiles[0].riskScore * 0.37));
+    }
+
+    reportBody.innerHTML = `
+      <div style="font-family:var(--font-base)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary)">KSP AI Investigation Case Report</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">Generated: ${dateStr} at ${timeStr} · Classification: CONFIDENTIAL</div>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);text-align:right">
+            Report ID: RPT-${Math.random().toString(36).slice(2,8).toUpperCase()}<br>
+            Bengaluru Urban Command
+          </div>
+        </div>
+        <div style="height:2px;background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan));border-radius:2px;margin-bottom:16px"></div>
+
+        <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:0 0 8px">📊 Intelligence Summary</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+          <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--accent-blue)">${totalCases.toLocaleString('en-IN')}</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">Cases Analyzed</div>
+          </div>
+          <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--success)">${prob}%</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">Resolution Probability</div>
+          </div>
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:1.5rem;font-weight:800;color:var(--warning)">${solveRate}%</div>
+            <div style="font-size:0.65rem;color:var(--text-muted)">Solve Rate</div>
+          </div>
+        </div>
+
+        <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:12px 0 6px">🧠 AI Detective Key Findings</h3>
+        <ul style="font-size:0.8rem;margin-left:16px;line-height:1.8;color:var(--text-secondary)">${findingsHTML}</ul>
+
+        <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:12px 0 6px">🛡️ Recommended Actions</h3>
+        <ul style="font-size:0.8rem;margin-left:16px;line-height:1.8;color:var(--text-secondary)">${recsHTML}</ul>
+
+        <div style="margin-top:16px;padding:10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;font-size:0.7rem;color:var(--text-muted)">
+          ⚠️ This report is AI-generated based on KSP Crime Intelligence Database (${totalCases.toLocaleString('en-IN')} records). For operational use only.
+        </div>
+      </div>`;
+  }
+
+  btnReport?.addEventListener('click', () => {
+    buildReportContent();
+    modal.style.display = 'block';
+    lucide.createIcons({ nodes: [modal] });
+  });
+  btnClose?.addEventListener('click', () => { modal.style.display = 'none'; });
+  btnPrint?.addEventListener('click', () => { window.print(); });
+  btnDownload?.addEventListener('click', () => {
+    window.print(); // triggers Save as PDF in modern browsers
+    modal.style.display = 'none';
+  });
+
+  // ── Boot sequence: load DB then populate everything ───────
+  if (window.KSPDatabase) {
+    KSPDatabase.init();
+    populateLeftPanels();
+    populatePinBoard();
+    populateRightPanel();
+  } else {
+    // Retry after scripts finish loading
+    window.addEventListener('load', () => {
+      if (window.KSPDatabase) KSPDatabase.init();
+      populateLeftPanels();
+      populatePinBoard();
+      populateRightPanel();
+    });
+  }
+});
+</script>
+</body>
+</html>

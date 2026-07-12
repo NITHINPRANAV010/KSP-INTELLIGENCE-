@@ -1,0 +1,935 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commander Briefing â€” KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .briefing-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: var(--space-lg);
+    }
+    @media(max-width:1280px){ .briefing-grid{grid-template-columns:1fr} }
+
+    /* Presentation Mode Overlay */
+    .presentation-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+    }
+    .presentation-overlay.active { display: flex; }
+    .pres-slide {
+      width: 100%; max-width: 1200px;
+      display: none;
+      flex-direction: column;
+      gap: 32px;
+      animation: fadeIn 0.5s ease;
+    }
+    .pres-slide.active { display: flex; }
+    .pres-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .pres-title {
+      font-size: 2.5rem; font-weight: 900;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .pres-slide-num {
+      font-size: 0.875rem; color: rgba(255,255,255,0.3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pres-kpi-grid {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
+    }
+    .pres-kpi {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; padding: 24px; text-align: center;
+    }
+    .pres-kpi-val {
+      font-size: 3rem; font-weight: 900; line-height: 1;
+      margin-bottom: 8px;
+    }
+    .pres-kpi-label { font-size: 0.875rem; color: rgba(255,255,255,0.5); }
+    .pres-alert-list { display: flex; flex-direction: column; gap: 12px; }
+    .pres-alert {
+      background: rgba(255,255,255,0.03);
+      border-left: 4px solid;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .pres-close {
+      position: fixed; top: 24px; right: 24px;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 8px 16px;
+      color: #fff; cursor: pointer; font-size: 0.875rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s;
+    }
+    .pres-close:hover { background: rgba(255,255,255,0.2); }
+    .pres-nav {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 12px; align-items: center;
+    }
+    .pres-nav-btn {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 10px 24px;
+      color: #fff; cursor: pointer; font-weight: 600; font-size: 0.875rem;
+      transition: all 0.2s;
+    }
+    .pres-nav-btn:hover { background: rgba(255,255,255,0.2); }
+    .pres-progress { display: flex; gap: 6px; }
+    .pres-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.2); transition: all 0.3s;
+    }
+    .pres-dot.active { background: #60a5fa; transform: scale(1.2); }
+
+    /* Briefing countdown */
+    .briefing-countdown {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-md); padding: 10px 16px;
+      margin-bottom: var(--space-md);
+    }
+    .countdown-num {
+      font-size: 1.75rem; font-weight: 900; color: var(--critical);
+      font-family: 'JetBrains Mono', monospace; min-width: 50px;
+    }
+
+    /* District ranking */
+    .district-rank-row {
+      display: flex; align-items: center; gap: var(--space-md);
+      padding: 10px 12px; border-radius: var(--radius-md);
+      transition: all 0.2s;
+    }
+    .district-rank-row:hover { background: rgba(255,255,255,0.03); }
+    .rank-badge {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 800; flex-shrink: 0;
+    }
+    .rank-1 { background: rgba(239,68,68,0.2); color: var(--critical); }
+    .rank-2 { background: rgba(245,158,11,0.2); color: var(--warning); }
+    .rank-3 { background: rgba(234,179,8,0.2); color: #eab308; }
+    .rank-4 { background: rgba(59,130,246,0.2); color: var(--accent-blue); }
+    .rank-5 { background: rgba(34,197,94,0.2); color: var(--success); }
+
+    /* Threat card */
+    .threat-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      display: flex; gap: var(--space-md); align-items: flex-start;
+      transition: all 0.2s;
+    }
+    .threat-card:hover { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.03); }
+    .threat-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Recommendation */
+    .rec-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px; border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+      margin-bottom: var(--space-sm);
+    }
+    .rec-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: rgba(59,130,246,0.2); color: var(--accent-blue);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800; flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* AI voice animation */
+    .voice-bars {
+      display: flex; align-items: center; gap: 3px; height: 24px;
+    }
+    .voice-bar {
+      width: 3px; border-radius: 99px;
+      background: var(--accent-blue);
+      animation: voiceBar 0.8s ease infinite;
+    }
+    .voice-bar:nth-child(1){ height: 8px; animation-delay: 0s; }
+    .voice-bar:nth-child(2){ height: 16px; animation-delay: 0.1s; }
+    .voice-bar:nth-child(3){ height: 24px; animation-delay: 0.2s; }
+    .voice-bar:nth-child(4){ height: 16px; animation-delay: 0.3s; }
+    .voice-bar:nth-child(5){ height: 8px; animation-delay: 0.4s; }
+    @keyframes voiceBar {
+      0%,100%{ transform:scaleY(0.4); opacity:0.5; }
+      50%{ transform:scaleY(1); opacity:1; }
+    }
+    .voice-bars.paused .voice-bar { animation-play-state: paused; }
+
+    .stat-bar {
+      height: 6px; border-radius: 99px;
+      background: var(--bg-tertiary); overflow: hidden; margin-top: 6px;
+    }
+    .stat-bar-fill {
+      height: 100%; border-radius: 99px;
+      transition: width 1s ease;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <a class="nav-item" href="serial-crimes.html"><span class="nav-icon"><i data-lucide="link-2"></i></span><span class="nav-label">Serial Crimes</span></a>
+      <a class="nav-item" href="digital-footprint.html"><span class="nav-icon"><i data-lucide="fingerprint"></i></span><span class="nav-label">Digital Footprint</span></a>
+      <div class="nav-section-label">Command</div>
+      <a class="nav-item active" href="commander.html"><span class="nav-icon"><i data-lucide="shield-alert"></i></span><span class="nav-label">Commander Briefing</span></a>
+      <a class="nav-item" href="resource-ai.html"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Resource AI</span></a>
+      <a class="nav-item" href="case-priority.html"><span class="nav-icon"><i data-lucide="list-ordered"></i></span><span class="nav-label">Case Priority AI</span></a>
+      <a class="nav-item" href="cascade.html"><span class="nav-icon"><i data-lucide="activity"></i></span><span class="nav-label">Crime Cascade</span></a>
+      <a class="nav-item" href="event-monitor.html"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Event Monitor</span></a>
+      <a class="nav-item" href="scenario.html"><span class="nav-icon"><i data-lucide="flask-conical"></i></span><span class="nav-label">AI Scenario Sim</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Commander Briefing <span>/ 60-Second Intelligence Summary</span></div>
+    <div class="topnav-actions">
+      <div class="live-indicator" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--success)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulseDot 1.5s ease infinite"></div>
+        <span>LIVE</span>
+      </div>
+      <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
+      <button class="btn btn-primary" id="launch-presentation" style="display:flex;align-items:center;gap:8px;font-size:0.8rem">
+        <i data-lucide="presentation" style="width:14px;height:14px"></i>
+        Presentation Mode
+      </button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP Â· Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content page-content">
+    <!-- Demo bar -->
+    <div class="demo-guide-bar" style="background:linear-gradient(90deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.25);border-radius:var(--radius-md);padding:10px 16px;display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md);flex-wrap:wrap">
+      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;white-space:nowrap;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
+      <a href="../index.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">1 Dashboard</a>
+      <a href="heatmap.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">2 ðŸ—ºï¸ Heatmap</a>
+      <a href="serial-crimes.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">3 ðŸ”— Serial Crimes</a>
+      <a href="commander.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.4);color:var(--text-primary);text-decoration:none">4 ðŸŽ–ï¸ Commander</a>
+      <a href="cascade.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">5 ðŸŒŠ Cascade</a>
+      <a href="scenario.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">6 ðŸ”¬ Scenario</a>
+      <a href="digital-footprint.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">7 ðŸ‘£ Footprint</a>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="shield-alert" style="width:24px;height:24px;color:var(--critical)"></i> Commander Briefing</h1>
+        <p class="page-header-sub">60-Second AI-Generated Executive Intelligence Summary â€¢ Karnataka State Police</p>
+      </div>
+      <div class="page-header-right" style="display:flex;gap:var(--space-sm)">
+        <button class="btn btn-ghost" id="auto-read-btn" onclick="toggleAutoRead()">
+          <i data-lucide="volume-2" style="width:14px;height:14px"></i> Auto-Read
+        </button>
+        <button class="btn btn-ghost" onclick="regenerateBriefing()">
+          <i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Regenerate
+        </button>
+        <button class="btn btn-primary" onclick="exportBriefing()">
+          <i data-lucide="download" style="width:14px;height:14px"></i> Export PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- AI Voice Indicator -->
+    <div class="briefing-countdown card-sm card stagger-item" id="countdown-bar" style="display:flex;align-items:center;gap:16px;padding:12px 16px">
+      <div class="voice-bars" id="voice-bars">
+        <div class="voice-bar"></div>
+        <div class="voice-bar"></div>
+        <div class="voice-bar"></div>
+        <div class="voice-bar"></div>
+        <div class="voice-bar"></div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text-primary)">AI Commander Briefing â€” Reading Time: <span id="read-time">~58 seconds</span></div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">Generated at <span id="briefing-gen-time"></span> Â· Confidence: 94.2%</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="printBriefing()"><i data-lucide="printer" style="width:12px;height:12px"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="shareBriefing()"><i data-lucide="share-2" style="width:12px;height:12px"></i></button>
+      </div>
+    </div>
+
+    <div class="briefing-grid stagger-item">
+      <!-- LEFT: Main Briefing Content -->
+      <div style="display:flex;flex-direction:column;gap:var(--space-lg)">
+
+        <!-- Statewide Overview -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="globe" style="width:16px;height:16px;color:var(--accent-cyan)"></i> Statewide Crime Overview</div>
+            <span class="badge badge-info">TODAY</span>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-md);margin-bottom:var(--space-lg)">
+              <div style="text-align:center;padding:var(--space-md);background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:var(--radius-md)">
+                <div style="font-size:2.25rem;font-weight:900;color:var(--critical);line-height:1">247</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">INCIDENTS TODAY</div>
+                <div style="font-size:0.7rem;color:var(--critical);margin-top:2px">â–² +18% vs 7-day avg</div>
+              </div>
+              <div style="text-align:center;padding:var(--space-md);background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:var(--radius-md)">
+                <div style="font-size:2.25rem;font-weight:900;color:var(--warning);line-height:1">34</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">CRITICAL ALERTS</div>
+                <div style="font-size:0.7rem;color:var(--warning);margin-top:2px">â–² +7 since midnight</div>
+              </div>
+              <div style="text-align:center;padding:var(--space-md);background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-md)">
+                <div style="font-size:2.25rem;font-weight:900;color:var(--accent-blue);line-height:1">89%</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">COVERAGE RATE</div>
+                <div style="font-size:0.7rem;color:var(--accent-blue);margin-top:2px">â–¼ -3% from target</div>
+              </div>
+              <div style="text-align:center;padding:var(--space-md);background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:var(--radius-md)">
+                <div style="font-size:2.25rem;font-weight:900;color:var(--success);line-height:1">12</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">ARRESTS TODAY</div>
+                <div style="font-size:0.7rem;color:var(--success);margin-top:2px">â–² +2 since yesterday</div>
+              </div>
+            </div>
+
+            <div class="ai-briefing-text" style="background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-md);padding:var(--space-md)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--space-sm)">
+                <span style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:var(--accent-cyan)">ðŸ¤– AI COMMANDER SUMMARY</span>
+              </div>
+              <p style="font-size:0.875rem;line-height:1.7;color:var(--text-primary)" id="executive-summary">
+                Good morning, Commander. As of <strong>10:58 AM IST</strong>, Karnataka State Police is monitoring <strong>247 active incidents</strong> across 31 districts. 
+                Today's crime activity is <strong>18% above the 7-day average</strong>, primarily driven by a surge in theft and vehicle crime in the <strong>Bengaluru Urban</strong> corridor.
+                <br><br>
+                The AI Prediction Engine has flagged a <strong>HIGH-RISK window between 6PMâ€“10PM today</strong> in Kalaburagi, Hubballi-Dharwad, and North Bengaluru due to festival activity and reduced patrol coverage. 
+                Three potential <strong>serial crime clusters</strong> have been detectedâ€”one involving a chain-snatching pattern across 7 locations in South Bengaluru.
+                <br><br>
+                Immediate attention is recommended for: <strong>Deployment gap in KGF Division</strong>, <strong>Escalating gang activity in Bidar</strong>, and <strong>Unmonitored border movement in Belagavi</strong>. 
+                Overall intelligence confidence for this briefing stands at <strong>94.2%</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critical Alerts -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="alert-triangle" style="width:16px;height:16px;color:var(--critical)"></i> Critical Alerts</div>
+            <span class="badge badge-danger">3 CRITICAL</span>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:var(--space-sm)">
+            <div class="threat-card" style="border-left:3px solid var(--critical)">
+              <div class="threat-icon" style="background:rgba(239,68,68,0.1)">
+                <i data-lucide="alert-octagon" style="width:18px;height:18px;color:var(--critical)"></i>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);margin-bottom:4px">Gang Activity Surge â€” Bidar District</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">3 gang-related incidents in 6 hours. Known associates of Ravi Naik group spotted near NH-65. Recommend immediate intelligence gathering and preventive detention orders.</div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <span class="badge badge-danger" style="font-size:0.6rem">CRITICAL</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">Detected 47 min ago</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">Confidence: 91%</span>
+                </div>
+              </div>
+            </div>
+            <div class="threat-card" style="border-left:3px solid var(--critical)">
+              <div class="threat-icon" style="background:rgba(239,68,68,0.1)">
+                <i data-lucide="link-2" style="width:18px;height:18px;color:var(--critical)"></i>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);margin-bottom:4px">Serial Chain-Snatching â€” South Bengaluru</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">7 incidents with identical MO: Two-wheeler, evening rush hour, residential areas. AI pattern match: 87% probability of same perpetrator. Last incident: JP Nagar, 09:15 AM.</div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <span class="badge badge-danger" style="font-size:0.6rem">CRITICAL</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">Serial crime alert</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">Confidence: 87%</span>
+                </div>
+              </div>
+            </div>
+            <div class="threat-card" style="border-left:3px solid var(--warning)">
+              <div class="threat-icon" style="background:rgba(245,158,11,0.1)">
+                <i data-lucide="truck" style="width:18px;height:18px;color:var(--warning)"></i>
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:0.875rem;color:var(--text-primary);margin-bottom:4px">Unregistered Vehicle Movement â€” Belagavi Border</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">CCTV flagged 4 unregistered vehicles crossing Belagavi-Goa border in last 2 hours. Cross-reference with stolen vehicle database shows 2 matches. Checkpoint recommended.</div>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                  <span class="badge badge-warning" style="font-size:0.6rem">HIGH</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">2h 14m ago</span>
+                  <span style="font-size:0.7rem;color:var(--text-muted)">Confidence: 78%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Emerging Threats -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="trending-up" style="width:16px;height:16px;color:var(--warning)"></i> Emerging Threats â€” Next 24 Hours</div>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+              <div style="padding:var(--space-md);background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.15);border-radius:var(--radius-md)">
+                <div style="font-weight:700;font-size:0.8125rem;margin-bottom:6px;color:var(--warning)">ðŸŽ‰ Dasara Festival Risk</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">Mysuru district expects 80,000+ visitors. AI predicts 340% crime increase vs normal day. Pickpocket, chain-snatching, and mob incidents likely.</div>
+                <div class="stat-bar" style="margin-top:10px"><div class="stat-bar-fill" style="width:85%;background:var(--warning)"></div></div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Risk Level: 85% HIGH</div>
+              </div>
+              <div style="padding:var(--space-md);background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.15);border-radius:var(--radius-md)">
+                <div style="font-weight:700;font-size:0.8125rem;margin-bottom:6px;color:var(--critical)">ðŸ“¢ Political Rally â€” Kalaburagi</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">Opposition rally scheduled 4 PM. Historical data shows 73% higher incident rate during political gatherings in this zone. 800+ personnel expected.</div>
+                <div class="stat-bar" style="margin-top:10px"><div class="stat-bar-fill" style="width:73%;background:var(--critical)"></div></div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Risk Level: 73% HIGH</div>
+              </div>
+              <div style="padding:var(--space-md);background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-md)">
+                <div style="font-weight:700;font-size:0.8125rem;margin-bottom:6px;color:var(--accent-blue)">ðŸ’» Cyber Fraud Spike</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">UPI fraud complaints up 42% in last 3 days. Pattern suggests coordinated gang operating from Tumkuru. Digital forensics team deployment recommended.</div>
+                <div class="stat-bar" style="margin-top:10px"><div class="stat-bar-fill" style="width:62%;background:var(--accent-blue)"></div></div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Risk Level: 62% MEDIUM</div>
+              </div>
+              <div style="padding:var(--space-md);background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.15);border-radius:var(--radius-md)">
+                <div style="font-weight:700;font-size:0.8125rem;margin-bottom:6px;color:#a78bfa">ðŸš‚ Railway Station Watch</div>
+                <div style="font-size:0.8rem;color:var(--text-muted)">Bengaluru City Station: Known trafficker spotted at platform 4. Cross-referencing with interstate movement database. High probability of narcotics transit.</div>
+                <div class="stat-bar" style="margin-top:10px"><div class="stat-bar-fill" style="width:55%;background:#a78bfa"></div></div>
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Risk Level: 55% MEDIUM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommended Actions -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="check-square" style="width:16px;height:16px;color:var(--success)"></i> AI-Recommended Commander Actions</div>
+            <span class="badge badge-success">6 PRIORITY ACTIONS</span>
+          </div>
+          <div class="card-body">
+            <div class="rec-item">
+              <div class="rec-num">1</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.8125rem;color:var(--text-primary)">Deploy additional 2 platoons to Bidar immediately</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Based on gang activity surge. Expected deterrent effect: 67%. Impact: HIGH | Urgency: IMMEDIATE</div>
+              </div>
+              <span class="badge badge-danger" style="font-size:0.6rem;flex-shrink:0">IMMEDIATE</span>
+            </div>
+            <div class="rec-item">
+              <div class="rec-num">2</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.8125rem;color:var(--text-primary)">Issue BOLO for South Bengaluru chain-snatching suspect</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Two-wheeler, male, 25-35 years. 3 CCTV captures available. AI composite sketch generated. Impact: HIGH | Resources: 5 officers</div>
+              </div>
+              <span class="badge badge-danger" style="font-size:0.6rem;flex-shrink:0">IMMEDIATE</span>
+            </div>
+            <div class="rec-item">
+              <div class="rec-num">3</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.8125rem;color:var(--text-primary)">Establish checkpoints at Belagavi-Goa NH 4A exit</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">For vehicle verification. Stolen vehicle alert active. Impact: MEDIUM-HIGH | Urgency: WITHIN 1 HOUR</div>
+              </div>
+              <span class="badge badge-warning" style="font-size:0.6rem;flex-shrink:0">1 HOUR</span>
+            </div>
+            <div class="rec-item">
+              <div class="rec-num">4</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.8125rem;color:var(--text-primary)">Pre-position 3 companies for Mysuru Dasara security</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Cover all 7 high-footfall zones. Coordinate with event organizers. Deploy plain-clothes team for pickpocket prevention.</div>
+              </div>
+              <span class="badge badge-warning" style="font-size:0.6rem;flex-shrink:0">TODAY</span>
+            </div>
+            <div class="rec-item">
+              <div class="rec-num">5</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.8125rem;color:var(--text-primary)">Activate Cyber Cell for Tumkuru UPI fraud investigation</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">AI has identified 3 suspect phone numbers and 2 mule accounts. Coordinate with bank fraud teams for account freeze.</div>
+              </div>
+              <span class="badge badge-info" style="font-size:0.6rem;flex-shrink:0">TODAY</span>
+            </div>
+            <div class="rec-item">
+              <div class="rec-num">6</div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:0.8125rem;color:var(--text-primary)">Brief KGF Division SP on deployment gap</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">KGF shows 23% lower patrol coverage vs optimal. Reallocate 1 platoon from Chikkamagaluru (low-risk today) to cover gap.</div>
+              </div>
+              <span class="badge badge-secondary" style="font-size:0.6rem;flex-shrink:0">THIS WEEK</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: District Rankings + Deployment -->
+      <div style="display:flex;flex-direction:column;gap:var(--space-lg)">
+
+        <!-- District Risk Rankings -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="trophy" style="width:16px;height:16px;color:var(--warning)"></i> District Risk Rankings</div>
+          </div>
+          <div class="card-body">
+            <div id="district-rankings">
+              <!-- populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Expected High-Risk Areas -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="map-pin-alert" style="width:16px;height:16px;color:var(--critical)"></i> Expected High-Risk Areas</div>
+            <span class="badge badge-danger">NEXT 12H</span>
+          </div>
+          <div class="card-body">
+            <canvas id="risk-chart" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Officer Deployment Suggestions -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="users" style="width:16px;height:16px;color:var(--accent-blue)"></i> Deployment Suggestions</div>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+              <div style="font-size:0.8rem;color:var(--text-primary);font-weight:500">Bengaluru Urban</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--warning)">+120 officers</div>
+                <span class="badge badge-warning" style="font-size:0.6rem">ADD</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+              <div style="font-size:0.8rem;color:var(--text-primary);font-weight:500">Bidar</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--critical)">+80 officers</div>
+                <span class="badge badge-danger" style="font-size:0.6rem">URGENT</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+              <div style="font-size:0.8rem;color:var(--text-primary);font-weight:500">Mysuru</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--warning)">+200 officers</div>
+                <span class="badge badge-warning" style="font-size:0.6rem">EVENT</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+              <div style="font-size:0.8rem;color:var(--text-primary);font-weight:500">Kalaburagi</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--warning)">+60 officers</div>
+                <span class="badge badge-warning" style="font-size:0.6rem">RALLY</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+              <div style="font-size:0.8rem;color:var(--text-primary);font-weight:500">Chikkamagaluru</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--success)">-40 officers</div>
+                <span class="badge badge-success" style="font-size:0.6rem">REDEPLOY</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0">
+              <div style="font-size:0.8rem;color:var(--text-primary);font-weight:500">KGF Division</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:0.8rem;font-weight:700;color:var(--accent-blue)">+40 officers</div>
+                <span class="badge badge-info" style="font-size:0.6rem">COVERAGE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Confidence -->
+        <div class="card" style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(139,92,246,0.06));border-color:rgba(59,130,246,0.2)">
+          <div class="card-body" style="text-align:center;padding:var(--space-md)">
+            <div style="font-size:3rem;font-weight:900;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1">94.2%</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">BRIEFING CONFIDENCE SCORE</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);margin-top:8px">Based on 247 data points across 31 districts. Last model sync: 3 minutes ago.</div>
+            <button class="btn btn-primary" onclick="document.getElementById('launch-presentation').click()" style="margin-top:var(--space-md);width:100%">
+              <i data-lucide="presentation" style="width:14px;height:14px"></i>
+              Launch Presentation Mode
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- PRESENTATION MODE OVERLAY -->
+<div class="presentation-overlay" id="pres-overlay">
+  <button class="pres-close" onclick="closePres()">
+    <i data-lucide="x" style="width:14px;height:14px"></i> Exit Presentation
+  </button>
+
+  <!-- Slide 1: Overview -->
+  <div class="pres-slide active" id="slide-1">
+    <div class="pres-header">
+      <div>
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px">KARNATAKA STATE POLICE Â· COMMANDER BRIEFING</div>
+        <div class="pres-title">Statewide Crime Overview</div>
+      </div>
+      <div class="pres-slide-num">01 / 05</div>
+    </div>
+    <div class="pres-kpi-grid">
+      <div class="pres-kpi">
+        <div class="pres-kpi-val" style="color:#ef4444">247</div>
+        <div class="pres-kpi-label">Incidents Today</div>
+        <div style="color:#ef4444;font-size:0.875rem;margin-top:8px">â–² +18% above average</div>
+      </div>
+      <div class="pres-kpi">
+        <div class="pres-kpi-val" style="color:#f59e0b">34</div>
+        <div class="pres-kpi-label">Critical Alerts</div>
+        <div style="color:#f59e0b;font-size:0.875rem;margin-top:8px">â–² +7 since midnight</div>
+      </div>
+      <div class="pres-kpi">
+        <div class="pres-kpi-val" style="color:#3b82f6">89%</div>
+        <div class="pres-kpi-label">Coverage Rate</div>
+        <div style="color:#3b82f6;font-size:0.875rem;margin-top:8px">â–¼ -3% from target</div>
+      </div>
+      <div class="pres-kpi">
+        <div class="pres-kpi-val" style="color:#22c55e">12</div>
+        <div class="pres-kpi-label">Arrests Today</div>
+        <div style="color:#22c55e;font-size:0.875rem;margin-top:8px">â–² +2 from yesterday</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;font-size:1.1rem;line-height:1.8;color:rgba(255,255,255,0.8)">
+      Today's crime activity is <strong style="color:#60a5fa">18% above the 7-day average</strong>, driven primarily by a surge in theft and vehicle crime in the <strong style="color:#f59e0b">Bengaluru Urban corridor</strong>. 
+      Three serial crime clusters detected. High-risk window predicted <strong style="color:#ef4444">6PMâ€“10PM today</strong> across 3 districts.
+    </div>
+  </div>
+
+  <!-- Slide 2: Critical Alerts -->
+  <div class="pres-slide" id="slide-2">
+    <div class="pres-header">
+      <div>
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px">KARNATAKA STATE POLICE Â· COMMANDER BRIEFING</div>
+        <div class="pres-title">Critical Alerts</div>
+      </div>
+      <div class="pres-slide-num">02 / 05</div>
+    </div>
+    <div class="pres-alert-list">
+      <div class="pres-alert" style="border-color:#ef4444">
+        <div style="font-size:2rem">ðŸš¨</div>
+        <div>
+          <div style="font-size:1.25rem;font-weight:700;color:#fff;margin-bottom:8px">Gang Activity Surge â€” Bidar District</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:1rem">3 gang-related incidents in 6 hours. Immediate deployment recommended. Confidence: 91%</div>
+        </div>
+        <span style="padding:4px 12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:99px;color:#ef4444;font-size:0.875rem;font-weight:700;white-space:nowrap;flex-shrink:0">CRITICAL</span>
+      </div>
+      <div class="pres-alert" style="border-color:#ef4444">
+        <div style="font-size:2rem">ðŸ”—</div>
+        <div>
+          <div style="font-size:1.25rem;font-weight:700;color:#fff;margin-bottom:8px">Serial Chain-Snatching â€” South Bengaluru</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:1rem">7 incidents, identical MO. AI pattern match: 87% same perpetrator. BOLO recommended immediately.</div>
+        </div>
+        <span style="padding:4px 12px;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:99px;color:#ef4444;font-size:0.875rem;font-weight:700;white-space:nowrap;flex-shrink:0">CRITICAL</span>
+      </div>
+      <div class="pres-alert" style="border-color:#f59e0b">
+        <div style="font-size:2rem">ðŸš›</div>
+        <div>
+          <div style="font-size:1.25rem;font-weight:700;color:#fff;margin-bottom:8px">Unregistered Vehicles â€” Belagavi Border</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:1rem">4 vehicles flagged. 2 match stolen vehicle database. Checkpoint at NH 4A recommended. Confidence: 78%</div>
+        </div>
+        <span style="padding:4px 12px;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);border-radius:99px;color:#f59e0b;font-size:0.875rem;font-weight:700;white-space:nowrap;flex-shrink:0">HIGH</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 3: Emerging Threats -->
+  <div class="pres-slide" id="slide-3">
+    <div class="pres-header">
+      <div>
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px">KARNATAKA STATE POLICE Â· COMMANDER BRIEFING</div>
+        <div class="pres-title">Emerging Threats â€” Next 24H</div>
+      </div>
+      <div class="pres-slide-num">03 / 05</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:16px;padding:24px">
+        <div style="font-size:1.5rem;margin-bottom:12px">ðŸŽ‰</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#f59e0b;margin-bottom:8px">Dasara Festival Â· Mysuru</div>
+        <div style="color:rgba(255,255,255,0.6);margin-bottom:16px">80,000+ visitors expected. 340% crime increase predicted vs normal.</div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:99px;height:8px"><div style="width:85%;height:100%;background:#f59e0b;border-radius:99px"></div></div>
+        <div style="color:#f59e0b;margin-top:8px;font-weight:700">Risk: 85% HIGH</div>
+      </div>
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:16px;padding:24px">
+        <div style="font-size:1.5rem;margin-bottom:12px">ðŸ“¢</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#ef4444;margin-bottom:8px">Political Rally Â· Kalaburagi</div>
+        <div style="color:rgba(255,255,255,0.6);margin-bottom:16px">4 PM. Historical: 73% higher incidents during political gatherings.</div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:99px;height:8px"><div style="width:73%;height:100%;background:#ef4444;border-radius:99px"></div></div>
+        <div style="color:#ef4444;margin-top:8px;font-weight:700">Risk: 73% HIGH</div>
+      </div>
+      <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);border-radius:16px;padding:24px">
+        <div style="font-size:1.5rem;margin-bottom:12px">ðŸ’»</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#3b82f6;margin-bottom:8px">Cyber Fraud Spike Â· Tumkuru</div>
+        <div style="color:rgba(255,255,255,0.6);margin-bottom:16px">UPI fraud up 42%. Coordinated gang suspected. Cyber Cell alert needed.</div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:99px;height:8px"><div style="width:62%;height:100%;background:#3b82f6;border-radius:99px"></div></div>
+        <div style="color:#3b82f6;margin-top:8px;font-weight:700">Risk: 62% MEDIUM</div>
+      </div>
+      <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:16px;padding:24px">
+        <div style="font-size:1.5rem;margin-bottom:12px">ðŸš‚</div>
+        <div style="font-size:1.25rem;font-weight:700;color:#a78bfa;margin-bottom:8px">Railway Watch Â· Bengaluru City</div>
+        <div style="color:rgba(255,255,255,0.6);margin-bottom:16px">Known trafficker spotted. Possible narcotics transit. Intelligence required.</div>
+        <div style="background:rgba(0,0,0,0.3);border-radius:99px;height:8px"><div style="width:55%;height:100%;background:#a78bfa;border-radius:99px"></div></div>
+        <div style="color:#a78bfa;margin-top:8px;font-weight:700">Risk: 55% MEDIUM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 4: District Rankings -->
+  <div class="pres-slide" id="slide-4">
+    <div class="pres-header">
+      <div>
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px">KARNATAKA STATE POLICE Â· COMMANDER BRIEFING</div>
+        <div class="pres-title">District Risk Rankings</div>
+      </div>
+      <div class="pres-slide-num">04 / 05</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:16px 20px">
+        <div style="font-size:2rem;font-weight:900;color:#ef4444;width:40px">#1</div>
+        <div style="flex:1"><div style="font-size:1.25rem;font-weight:700;color:#fff">Bengaluru Urban</div><div style="color:rgba(255,255,255,0.5)">Theft, Chain-snatching, Gang activity â€” 89 incidents today</div></div>
+        <div style="text-align:right"><div style="font-size:1.5rem;font-weight:900;color:#ef4444">CRITICAL</div><div style="color:rgba(255,255,255,0.4)">Risk Score: 94/100</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:12px;padding:16px 20px">
+        <div style="font-size:2rem;font-weight:900;color:#f59e0b;width:40px">#2</div>
+        <div style="flex:1"><div style="font-size:1.25rem;font-weight:700;color:#fff">Bidar</div><div style="color:rgba(255,255,255,0.5)">Gang activity, Political violence â€” 34 incidents today</div></div>
+        <div style="text-align:right"><div style="font-size:1.5rem;font-weight:900;color:#f59e0b">HIGH</div><div style="color:rgba(255,255,255,0.4)">Risk Score: 82/100</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.12);border-radius:12px;padding:16px 20px">
+        <div style="font-size:2rem;font-weight:900;color:#eab308;width:40px">#3</div>
+        <div style="flex:1"><div style="font-size:1.25rem;font-weight:700;color:#fff">Kalaburagi</div><div style="color:rgba(255,255,255,0.5)">Political rally risk, Vehicle crime â€” 28 incidents today</div></div>
+        <div style="text-align:right"><div style="font-size:1.5rem;font-weight:900;color:#eab308">HIGH</div><div style="color:rgba(255,255,255,0.4)">Risk Score: 74/100</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:20px;background:rgba(59,130,246,0.04);border:1px solid rgba(59,130,246,0.12);border-radius:12px;padding:16px 20px">
+        <div style="font-size:2rem;font-weight:900;color:#3b82f6;width:40px">#4</div>
+        <div style="flex:1"><div style="font-size:1.25rem;font-weight:700;color:#fff">Mysuru</div><div style="color:rgba(255,255,255,0.5)">Festival risk, Tourist crime â€” 21 incidents today</div></div>
+        <div style="text-align:right"><div style="font-size:1.5rem;font-weight:900;color:#3b82f6">MEDIUM</div><div style="color:rgba(255,255,255,0.4)">Risk Score: 68/100</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide 5: Recommended Actions -->
+  <div class="pres-slide" id="slide-5">
+    <div class="pres-header">
+      <div>
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.4);margin-bottom:8px">KARNATAKA STATE POLICE Â· COMMANDER BRIEFING</div>
+        <div class="pres-title">Immediate Action Items</div>
+      </div>
+      <div class="pres-slide-num">05 / 05</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:16px;background:rgba(239,68,68,0.08);border-left:4px solid #ef4444;border-radius:8px;padding:16px 20px">
+        <span style="font-size:1.5rem;font-weight:900;color:#ef4444">1</span>
+        <div><div style="font-size:1.1rem;font-weight:700;color:#fff">Deploy 2 platoons to Bidar</div><div style="color:rgba(255,255,255,0.5)">Immediate gang deterrence. Expected impact: 67% crime reduction.</div></div>
+        <span style="padding:4px 12px;background:rgba(239,68,68,0.2);border-radius:99px;color:#ef4444;font-weight:700;font-size:0.875rem;white-space:nowrap">NOW</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;background:rgba(239,68,68,0.06);border-left:4px solid #ef4444;border-radius:8px;padding:16px 20px">
+        <span style="font-size:1.5rem;font-weight:900;color:#ef4444">2</span>
+        <div><div style="font-size:1.1rem;font-weight:700;color:#fff">Issue BOLO â€” Serial chain-snatching suspect</div><div style="color:rgba(255,255,255,0.5)">AI composite ready. 3 CCTV captures. South Bengaluru units.</div></div>
+        <span style="padding:4px 12px;background:rgba(239,68,68,0.2);border-radius:99px;color:#ef4444;font-weight:700;font-size:0.875rem;white-space:nowrap">NOW</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;background:rgba(245,158,11,0.06);border-left:4px solid #f59e0b;border-radius:8px;padding:16px 20px">
+        <span style="font-size:1.5rem;font-weight:900;color:#f59e0b">3</span>
+        <div><div style="font-size:1.1rem;font-weight:700;color:#fff">Checkpoint at Belagavi-Goa NH 4A</div><div style="color:rgba(255,255,255,0.5)">2 stolen vehicle matches. Cross-state movement alert active.</div></div>
+        <span style="padding:4px 12px;background:rgba(245,158,11,0.2);border-radius:99px;color:#f59e0b;font-weight:700;font-size:0.875rem;white-space:nowrap">1 HR</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;background:rgba(59,130,246,0.06);border-left:4px solid #3b82f6;border-radius:8px;padding:16px 20px">
+        <span style="font-size:1.5rem;font-weight:900;color:#3b82f6">4</span>
+        <div><div style="font-size:1.1rem;font-weight:700;color:#fff">Activate Cyber Cell â€” Tumkuru UPI fraud</div><div style="color:rgba(255,255,255,0.5)">3 suspect numbers, 2 mule accounts identified by AI. Bank coordination needed.</div></div>
+        <span style="padding:4px 12px;background:rgba(59,130,246,0.2);border-radius:99px;color:#3b82f6;font-weight:700;font-size:0.875rem;white-space:nowrap">TODAY</span>
+      </div>
+      <div style="text-align:center;padding:16px;background:rgba(255,255,255,0.02);border-radius:12px;margin-top:8px">
+        <div style="font-size:2rem;font-weight:900;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">94.2% Confidence</div>
+        <div style="color:rgba(255,255,255,0.4);margin-top:4px">KSP AI Intelligence Platform Â· Karnataka State Police Â· Generated <span id="pres-gen-time"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <div class="pres-nav">
+    <button class="pres-nav-btn" onclick="prevSlide()">â† Previous</button>
+    <div class="pres-progress" id="pres-dots"></div>
+    <button class="pres-nav-btn" onclick="nextSlide()">Next â†’</button>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // Time
+  function updateTime() {
+    const el = document.getElementById('topnav-time');
+    if(el) el.textContent = new Date().toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});
+  }
+  updateTime(); setInterval(updateTime, 1000);
+
+  // Briefing gen time
+  const now = new Date();
+  document.getElementById('briefing-gen-time').textContent = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const presTime = document.getElementById('pres-gen-time');
+  if(presTime) presTime.textContent = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+
+  // Sidebar toggle
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  if(toggleBtn) toggleBtn.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
+
+  // District Rankings
+  const districts = [
+    { name:'Bengaluru Urban', score:94, incidents:89, trend:'â–²', color:'var(--critical)', rank:1 },
+    { name:'Bidar', score:82, incidents:34, trend:'â–²', color:'var(--warning)', rank:2 },
+    { name:'Kalaburagi', score:74, incidents:28, trend:'â–²', color:'#eab308', rank:3 },
+    { name:'Mysuru', score:68, incidents:21, trend:'â†’', color:'var(--accent-blue)', rank:4 },
+    { name:'Hubballi-Dharwad', score:61, incidents:19, trend:'â–¼', color:'#a78bfa', rank:5 },
+    { name:'Belagavi', score:58, incidents:17, trend:'â–²', color:'var(--accent-blue)', rank:6 },
+    { name:'Tumkuru', score:52, incidents:14, trend:'â–²', color:'var(--success)', rank:7 },
+  ];
+
+  const rankColors = ['rank-1','rank-2','rank-3','rank-4','rank-5','',''];
+  const container = document.getElementById('district-rankings');
+  districts.forEach((d,i) => {
+    container.innerHTML += `
+      <div class="district-rank-row">
+        <div class="rank-badge ${i<5?rankColors[i]:''}" style="${i>=5?'background:rgba(255,255,255,0.05);color:var(--text-muted)':''}">${d.rank}</div>
+        <div style="flex:1">
+          <div style="font-size:0.8125rem;font-weight:600;color:var(--text-primary)">${d.name}</div>
+          <div class="stat-bar"><div class="stat-bar-fill" style="width:${d.score}%;background:${d.color}"></div></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.8125rem;font-weight:800;color:${d.color}">${d.score}</div>
+          <div style="font-size:0.65rem;color:var(--text-muted)">${d.incidents} inc.</div>
+        </div>
+      </div>`;
+  });
+
+  // Risk Chart
+  const ctx = document.getElementById('risk-chart').getContext('2d');
+  new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels:['Bengaluru\nUrban','Bidar','Kalaburagi','Mysuru','Hubballi','Belagavi'],
+      datasets:[{
+        label:'Predicted Risk Score',
+        data:[94,82,74,68,61,58],
+        backgroundColor:[
+          'rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(234,179,8,0.7)',
+          'rgba(59,130,246,0.7)','rgba(139,92,246,0.7)','rgba(59,130,246,0.5)'
+        ],
+        borderRadius:6, borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'rgba(255,255,255,0.4)',font:{size:10}},max:100},
+        x:{grid:{display:false},ticks:{color:'rgba(255,255,255,0.4)',font:{size:9}}}
+      }
+    }
+  });
+
+  // Presentation Mode
+  let currentSlide = 1;
+  const totalSlides = 5;
+
+  function buildDots() {
+    const d = document.getElementById('pres-dots');
+    d.innerHTML = '';
+    for(let i=1;i<=totalSlides;i++) {
+      const dot = document.createElement('div');
+      dot.className = 'pres-dot' + (i===currentSlide?' active':'');
+      d.appendChild(dot);
+    }
+  }
+  buildDots();
+
+  function showSlide(n) {
+    document.querySelectorAll('.pres-slide').forEach(s=>s.classList.remove('active'));
+    document.getElementById('slide-'+n).classList.add('active');
+    currentSlide = n;
+    buildDots();
+  }
+  function nextSlide() { if(currentSlide<totalSlides) showSlide(currentSlide+1); }
+  function prevSlide() { if(currentSlide>1) showSlide(currentSlide-1); }
+  function closePres() {
+    document.getElementById('pres-overlay').classList.remove('active');
+    currentSlide=1; showSlide(1);
+  }
+
+  document.getElementById('launch-presentation').addEventListener('click',()=>{
+    document.getElementById('pres-overlay').classList.add('active');
+    lucide.createIcons();
+  });
+
+  // Keyboard nav for presentation
+  document.addEventListener('keydown',e=>{
+    if(!document.getElementById('pres-overlay').classList.contains('active')) return;
+    if(e.key==='ArrowRight'||e.key===' ') nextSlide();
+    if(e.key==='ArrowLeft') prevSlide();
+    if(e.key==='Escape') closePres();
+  });
+
+  function toggleAutoRead() {
+    const bars = document.getElementById('voice-bars');
+    bars.classList.toggle('paused');
+  }
+  function regenerateBriefing() {
+    const btn = document.querySelector('[onclick="regenerateBriefing()"]');
+    btn.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;animation:spin 1s linear infinite"></i> Generating...';
+    setTimeout(()=>{
+      btn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Regenerate';
+      lucide.createIcons();
+    },2500);
+    lucide.createIcons();
+  }
+  function exportBriefing() { window.print(); }
+  function printBriefing() { window.print(); }
+  function shareBriefing() { 
+    if(navigator.clipboard) navigator.clipboard.writeText(window.location.href);
+    alert('Briefing link copied to clipboard');
+  }
+</script>
+
+<script src="../js/ai-intelligence-overlay.js"></script>
+</body>
+</html>
+

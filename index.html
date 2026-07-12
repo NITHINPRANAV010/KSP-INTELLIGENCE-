@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="KSP AI Crime Intelligence Command Center â€” Real-time analytics, predictive intelligence, and decision support for Karnataka State Police.">
+  <title>Dashboard â€” KSP AI Crime Intelligence</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/core.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+  <style>
+    .dashboard-map { height: 360px; }
+    .hero-grid { display: grid; grid-template-columns: 1fr 340px; gap: var(--space-lg); }
+    @media (max-width:1280px) { .hero-grid { grid-template-columns: 1fr; } }
+    .incidents-table-wrap { overflow-x: auto; }
+    .live-indicator { display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--success) }
+    .live-dot { width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulseDot 1.5s ease infinite }
+    .kpi-grid-6 { display:grid;grid-template-columns:repeat(6,1fr);gap:var(--space-md); }
+    @media(max-width:1440px){ .kpi-grid-6{grid-template-columns:repeat(3,1fr)} }
+    @media(max-width:768px) { .kpi-grid-6{grid-template-columns:repeat(2,1fr)} }
+    .main-3col { display:grid;grid-template-columns:1fr 1fr 320px;gap:var(--space-lg); }
+    @media(max-width:1440px){ .main-3col{grid-template-columns:1fr 1fr} }
+    @media(max-width:1280px){ .main-3col{grid-template-columns:1fr} }
+    .trend-chart-wrap { height:220px; }
+    .donut-wrap { height:220px; }
+
+    /* â”€â”€ Live Intelligence Ticker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .intel-ticker-bar {
+      background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(34,211,238,0.05));
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--radius-md);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: var(--space-md);
+      overflow: hidden;
+    }
+    .ticker-label {
+      font-size: 0.65rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--accent-cyan);
+      white-space: nowrap; flex-shrink: 0;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .ticker-scroll {
+      flex: 1; overflow: hidden; position: relative; height: 20px;
+    }
+    .ticker-inner {
+      display: flex; gap: 60px; white-space: nowrap;
+      animation: tickerScroll 30s linear infinite;
+      font-size: 0.75rem; color: var(--text-secondary);
+    }
+    @keyframes tickerScroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .ticker-item { flex-shrink: 0; }
+    .ticker-item strong { color: var(--text-primary); }
+
+    /* â”€â”€ Demo Guide Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .demo-guide-bar {
+      background: linear-gradient(90deg, rgba(139,92,246,0.12), rgba(59,130,246,0.08));
+      border: 1px solid rgba(139,92,246,0.25);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: var(--space-md);
+      flex-wrap: wrap;
+    }
+    .demo-step {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      font-size: 0.7rem; font-weight: 600;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .demo-step:hover {
+      background: rgba(139,92,246,0.15);
+      border-color: rgba(139,92,246,0.4);
+      color: var(--text-primary);
+    }
+    .demo-step-num {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: rgba(139,92,246,0.3);
+      color: #a78bfa;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+    }
+
+    /* CSS Grid Layout & Chart.js Overflow Fixes */
+    .main-content {
+      max-width: calc(100% - var(--sidebar-width)) !important;
+      min-width: 0 !important;
+    }
+    .main-content.sidebar-collapsed {
+      max-width: calc(100% - var(--sidebar-collapsed)) !important;
+    }
+    .main-3col {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    .main-3col > * {
+      min-width: 0 !important;
+    }
+    .trend-chart-wrap, .donut-wrap {
+      position: relative !important;
+      width: 100% !important;
+    }
+    .incidents-table-wrap {
+      width: 100% !important;
+      overflow-x: auto !important;
+    }
+    .data-table {
+      width: 100% !important;
+      table-layout: auto !important;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- â”€â”€ SIDEBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+
+      <a class="nav-item active" href="index.html">
+        <span class="nav-icon"><i data-lucide="layout-dashboard"></i></span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <a class="nav-item" href="pages/investigation.html">
+        <span class="nav-icon"><i data-lucide="bot"></i></span>
+        <span class="nav-label">AI Investigation</span>
+      </a>
+      <a class="nav-item" href="pages/heatmap.html">
+        <span class="nav-icon"><i data-lucide="map"></i></span>
+        <span class="nav-label">Crime Heatmap</span>
+      </a>
+      <a class="nav-item" href="pages/analytics.html">
+        <span class="nav-icon"><i data-lucide="bar-chart-3"></i></span>
+        <span class="nav-label">Crime Analytics</span>
+      </a>
+      <a class="nav-item" href="pages/timeline.html">
+        <span class="nav-icon"><i data-lucide="clock"></i></span>
+        <span class="nav-label">Timeline Replay</span>
+      </a>
+
+      <div class="nav-section-label">Investigation</div>
+
+      <a class="nav-item" href="pages/network.html">
+        <span class="nav-icon"><i data-lucide="git-branch"></i></span>
+        <span class="nav-label">Criminal Network</span>
+      </a>
+      <a class="nav-item" href="pages/offenders.html">
+        <span class="nav-icon"><i data-lucide="user-x"></i></span>
+        <span class="nav-label">Repeat Offenders</span>
+      </a>
+      <a class="nav-item" href="pages/predictive.html">
+        <span class="nav-icon"><i data-lucide="brain-circuit"></i></span>
+        <span class="nav-label">Predictive Intel</span>
+      </a>
+      <a class="nav-item" href="pages/patrol.html">
+        <span class="nav-icon"><i data-lucide="navigation"></i></span>
+        <span class="nav-label">Patrol Deployment</span>
+      </a>
+      <a class="nav-item" href="pages/serial-crimes.html">
+        <span class="nav-icon"><i data-lucide="link-2"></i></span>
+        <span class="nav-label">Serial Crimes</span>
+        <span class="nav-badge" style="background:rgba(239,68,68,0.2);color:var(--critical);border:1px solid rgba(239,68,68,0.3)">NEW</span>
+      </a>
+      <a class="nav-item" href="pages/digital-footprint.html">
+        <span class="nav-icon"><i data-lucide="fingerprint"></i></span>
+        <span class="nav-label">Digital Footprint</span>
+      </a>
+
+      <div class="nav-section-label">Command</div>
+
+      <a class="nav-item" href="pages/commander.html">
+        <span class="nav-icon"><i data-lucide="shield-alert"></i></span>
+        <span class="nav-label">Commander Briefing</span>
+        <span class="nav-badge" style="background:rgba(239,68,68,0.2);color:var(--critical);border:1px solid rgba(239,68,68,0.3)">NEW</span>
+      </a>
+      <a class="nav-item" href="pages/resource-ai.html">
+        <span class="nav-icon"><i data-lucide="package"></i></span>
+        <span class="nav-label">Resource AI</span>
+      </a>
+      <a class="nav-item" href="pages/case-priority.html">
+        <span class="nav-icon"><i data-lucide="list-ordered"></i></span>
+        <span class="nav-label">Case Priority AI</span>
+      </a>
+      <a class="nav-item" href="pages/cascade.html">
+        <span class="nav-icon"><i data-lucide="activity"></i></span>
+        <span class="nav-label">Crime Cascade</span>
+      </a>
+      <a class="nav-item" href="pages/event-monitor.html">
+        <span class="nav-icon"><i data-lucide="calendar-days"></i></span>
+        <span class="nav-label">Event Monitor</span>
+      </a>
+      <a class="nav-item" href="pages/scenario.html">
+        <span class="nav-icon"><i data-lucide="flask-conical"></i></span>
+        <span class="nav-label">AI Scenario Sim</span>
+      </a>
+
+      <div class="nav-section-label">Management</div>
+
+      <a class="nav-item" href="pages/reports.html">
+        <span class="nav-icon"><i data-lucide="file-text"></i></span>
+        <span class="nav-label">Reports</span>
+      </a>
+      <a class="nav-item" href="pages/alerts.html">
+        <span class="nav-icon"><i data-lucide="bell"></i></span>
+        <span class="nav-label">Alerts</span>
+        <span class="nav-badge">5</span>
+      </a>
+      <a class="nav-item" href="pages/district.html">
+        <span class="nav-icon"><i data-lucide="map-pin"></i></span>
+        <span class="nav-label">District Intel</span>
+      </a>
+      <a class="nav-item" href="pages/users.html">
+        <span class="nav-icon"><i data-lucide="users"></i></span>
+        <span class="nav-label">User Management</span>
+      </a>
+      <a class="nav-item" href="pages/settings.html">
+        <span class="nav-icon"><i data-lucide="settings"></i></span>
+        <span class="nav-label">Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- â”€â”€ TOP NAV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Dashboard <span>/ Overview</span></div>
+
+    <div class="topnav-search">
+      <i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i>
+      <input type="text" id="global-search" placeholder="Search cases, suspects, locationsâ€¦ (Ctrl+K)">
+    </div>
+
+    <div class="topnav-actions">
+      <div class="live-indicator">
+        <div class="live-dot"></div>
+        <span>LIVE</span>
+      </div>
+
+      <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
+
+      <button class="topnav-btn" id="notif-btn" data-tooltip="Alerts">
+        <i data-lucide="bell" style="width:16px;height:16px"></i>
+        <span class="notif-badge">5</span>
+      </button>
+      <button class="topnav-btn" data-tooltip="Voice Search">
+        <i data-lucide="mic" style="width:16px;height:16px"></i>
+      </button>
+      <button class="topnav-btn" data-tooltip="Full Screen">
+        <i data-lucide="maximize-2" style="width:16px;height:16px"></i>
+      </button>
+
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info">
+          <span class="profile-name">Sanjay Gupta</span>
+          <span class="profile-rank">DCP Â· Bengaluru Urban</span>
+        </div>
+        <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--text-muted)"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- â”€â”€ MAIN CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <main class="main-content page-content" id="main-content">
+
+    <!-- Live Intelligence Ticker -->
+    <div class="intel-ticker-bar" id="intel-ticker-bar">
+      <div class="ticker-label">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--critical);animation:pulseDot 1s ease infinite"></span>
+        LIVE INTEL
+      </div>
+      <div class="ticker-scroll">
+        <div class="ticker-inner" id="ai-commentary-ticker">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Guided Demo Bar -->
+    <div class="demo-guide-bar">
+      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;white-space:nowrap;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
+      <a href="index.html" class="demo-step"><span class="demo-step-num">1</span> Dashboard</a>
+      <a href="pages/heatmap.html" class="demo-step"><span class="demo-step-num">2</span> ðŸ—ºï¸ Heatmap</a>
+      <a href="pages/serial-crimes.html" class="demo-step"><span class="demo-step-num">3</span> ðŸ”— Serial Crimes</a>
+      <a href="pages/commander.html" class="demo-step"><span class="demo-step-num">4</span> ðŸŽ–ï¸ Commander</a>
+      <a href="pages/cascade.html" class="demo-step"><span class="demo-step-num">5</span> ðŸŒŠ Cascade Sim</a>
+      <a href="pages/digital-footprint.html" class="demo-step"><span class="demo-step-num">6</span> ðŸ‘£ Footprint</a>
+      <a href="pages/scenario.html" class="demo-step"><span class="demo-step-num">7</span> ðŸ”¬ Scenario</a>
+      <a href="pages/resource-ai.html" class="demo-step"><span class="demo-step-num">8</span> ðŸ“¦ Resources</a>
+      <a href="pages/investigation.html" class="demo-step"><span class="demo-step-num">9</span> ðŸ¤– AI Agent</a>
+      <a href="pages/network.html" class="demo-step"><span class="demo-step-num">10</span> ðŸ•¸ï¸ Network</a>
+      <span style="margin-left:auto;font-size:0.65rem;color:var(--text-muted)">KSP AI Decision Intelligence Platform v2.0</span>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="layout" style="width:24px;height:24px;color:var(--accent-blue)"></i> Command Dashboard</h1>
+        <p class="page-header-sub">Real-time Crime Intelligence Overview â€¢ Karnataka State Police</p>
+      </div>
+    </div>
+
+    <!-- Global Interactive Filters -->
+    <div class="card card-sm stagger-item" style="margin-bottom:var(--space-lg); border-left: 3px solid var(--accent-blue)">
+      <div class="flex gap-md flex-wrap items-center justify-between">
+        <div class="flex gap-sm items-center">
+          <i data-lucide="filter" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+          <span style="font-weight:600;font-size:0.875rem;color:var(--text-primary)">Command Center Filters:</span>
+        </div>
+        <div class="flex gap-md flex-wrap items-center">
+          <!-- District -->
+          <div class="flex items-center gap-xs">
+            <span class="text-xs text-muted">District:</span>
+            <select class="form-control" id="filter-district" style="width:auto;padding:4px 8px;font-size:0.75rem">
+              <option value="all">All Karnataka</option>
+              <option value="Bengaluru Urban">Bengaluru Urban</option>
+              <option value="Mysuru">Mysuru</option>
+              <option value="Belagavi">Belagavi</option>
+              <option value="Kalaburagi">Kalaburagi</option>
+              <option value="Hubballi-Dharwad">Hubballi-Dharwad</option>
+            </select>
+          </div>
+          <!-- Crime Type -->
+          <div class="flex items-center gap-xs">
+            <span class="text-xs text-muted">Type:</span>
+            <select class="form-control" id="filter-crime" style="width:auto;padding:4px 8px;font-size:0.75rem">
+              <option value="all">All Crimes</option>
+              <option value="theft">Vehicle Theft</option>
+              <option value="cyber">Cybercrime</option>
+              <option value="fraud">Financial Fraud</option>
+              <option value="drugs">Narcotics</option>
+              <option value="robbery">Robbery</option>
+            </select>
+          </div>
+          <!-- Status -->
+          <div class="flex items-center gap-xs">
+            <span class="text-xs text-muted">Status:</span>
+            <select class="form-control" id="filter-status" style="width:auto;padding:4px 8px;font-size:0.75rem">
+              <option value="all">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Investigating">Investigating</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Arrested">Arrested</option>
+            </select>
+          </div>
+          <!-- Timeframe -->
+          <div class="flex items-center gap-xs">
+            <span class="text-xs text-muted">Timeframe:</span>
+            <select class="form-control" id="filter-time" style="width:auto;padding:4px 8px;font-size:0.75rem">
+              <option value="all">All History</option>
+              <option value="month">This Month</option>
+              <option value="week">This Week</option>
+              <option value="today">Today</option>
+            </select>
+          </div>
+          <!-- Reset -->
+          <button class="btn btn-secondary btn-sm" id="btn-reset-filters" style="padding:4px 10px;font-size:0.75rem">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero + AI Briefing -->
+    <div class="hero-grid stagger-item" style="margin-bottom:var(--space-lg)">
+      <div class="hero-section">
+        <div class="hero-badge">
+          <i data-lucide="shield" style="width:11px;height:11px"></i>
+          Karnataka State Police Â· AI Intelligence Platform
+        </div>
+        <h1 class="hero-title">AI Crime Intelligence<br><span>Command Center</span></h1>
+        <p class="hero-subtitle">Real-time analytics, predictive intelligence, and decision support for Karnataka's law enforcement operations.</p>
+
+        <!-- AI Briefing Card Container -->
+        <div class="ai-briefing-card" id="briefing-card-container">
+          <!-- Populated by briefing.js -->
+        </div>
+      </div>
+
+      <!-- Mini Stats Column -->
+      <div class="flex flex-col gap-md">
+        <div class="card card-sm card-accent-red stagger-item delay-100">
+          <div class="text-xs text-muted font-semibold uppercase tracking-wide mb-sm">High Risk Districts</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <script>
+              // Will render after page load
+            </script>
+            <div id="risk-districts-mini"></div>
+          </div>
+        </div>
+        <div class="card card-sm card-accent-cyan stagger-item delay-200">
+          <div class="text-xs text-muted font-semibold uppercase tracking-wide mb-sm">AI Accuracy</div>
+          <div class="flex items-center gap-md">
+            <div class="kpi-value" data-count="91.4" data-suffix="%" data-decimals="1" style="font-size:2rem">91.4%</div>
+            <div>
+              <div class="text-xs text-muted">Prediction accuracy</div>
+              <div class="text-xs text-success">â†‘ +2.3% this week</div>
+            </div>
+          </div>
+          <div class="confidence-gauge mt-sm">
+            <div class="confidence-track" style="flex:1">
+              <div class="confidence-fill" style="width:91.4%"></div>
+            </div>
+            <span class="confidence-value">91%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid-6" style="margin-bottom:var(--space-lg)">
+
+      <div class="kpi-card stagger-item delay-100" data-kpi
+        data-value="47" data-color="#EF4444"
+        data-spark="[24,31,19,42,38,35,47]">
+        <div class="kpi-card-header">
+          <div class="kpi-icon-wrap kpi-icon-red"><i data-lucide="alert-circle" style="width:18px;height:18px"></i></div>
+          <div class="kpi-trend up"><i data-lucide="trending-up" style="width:10px;height:10px"></i> +8.2%</div>
+        </div>
+        <div class="kpi-value">47</div>
+        <div class="kpi-label">Today's Crimes</div>
+        <div class="kpi-sparkline"><canvas></canvas></div>
+      </div>
+
+      <div class="kpi-card stagger-item delay-200" data-kpi
+        data-value="1284" data-color="#3B82F6"
+        data-spark="[1340,1298,1267,1312,1284,1251,1284]">
+        <div class="kpi-card-header">
+          <div class="kpi-icon-wrap kpi-icon-blue"><i data-lucide="folder-open" style="width:18px;height:18px"></i></div>
+          <div class="kpi-trend down"><i data-lucide="trending-down" style="width:10px;height:10px"></i> -3.1%</div>
+        </div>
+        <div class="kpi-value">1,284</div>
+        <div class="kpi-label">Active Cases</div>
+        <div class="kpi-sparkline"><canvas></canvas></div>
+      </div>
+
+      <div class="kpi-card stagger-item delay-300" data-kpi
+        data-value="5" data-color="#F59E0B"
+        data-spark="[3,4,4,5,5,4,5]">
+        <div class="kpi-card-header">
+          <div class="kpi-icon-wrap kpi-icon-warn"><i data-lucide="map-pin" style="width:18px;height:18px"></i></div>
+          <div class="kpi-trend up"><i data-lucide="trending-up" style="width:10px;height:10px"></i> +1</div>
+        </div>
+        <div class="kpi-value">5</div>
+        <div class="kpi-label">High Risk Districts</div>
+        <div class="kpi-sparkline"><canvas></canvas></div>
+      </div>
+
+      <div class="kpi-card stagger-item delay-400" data-kpi
+        data-value="312" data-color="#EF4444"
+        data-spark="[245,267,278,289,301,308,312]">
+        <div class="kpi-card-header">
+          <div class="kpi-icon-wrap kpi-icon-red"><i data-lucide="user-x" style="width:18px;height:18px"></i></div>
+          <div class="kpi-trend up"><i data-lucide="trending-up" style="width:10px;height:10px"></i> +12.4%</div>
+        </div>
+        <div class="kpi-value">312</div>
+        <div class="kpi-label">Repeat Offenders</div>
+        <div class="kpi-sparkline"><canvas></canvas></div>
+      </div>
+
+      <div class="kpi-card stagger-item delay-500" data-kpi
+        data-value="91.4" data-suffix="%" data-decimals="1" data-color="#22D3EE"
+        data-spark="[84,86,87,89,90,91,91.4]">
+        <div class="kpi-card-header">
+          <div class="kpi-icon-wrap kpi-icon-cyan"><i data-lucide="brain-circuit" style="width:18px;height:18px"></i></div>
+          <div class="kpi-trend down"><i data-lucide="trending-up" style="width:10px;height:10px"></i> +2.3%</div>
+        </div>
+        <div class="kpi-value">91.4%</div>
+        <div class="kpi-label">Prediction Accuracy</div>
+        <div class="kpi-sparkline"><canvas></canvas></div>
+      </div>
+
+      <div class="kpi-card stagger-item delay-600" data-kpi
+        data-value="23" data-color="#8B5CF6"
+        data-spark="[8,12,9,17,14,19,23]">
+        <div class="kpi-card-header">
+          <div class="kpi-icon-wrap kpi-icon-violet"><i data-lucide="zap" style="width:18px;height:18px"></i></div>
+          <div class="kpi-trend up"><i data-lucide="trending-up" style="width:10px;height:10px"></i> +5</div>
+        </div>
+        <div class="kpi-value">23</div>
+        <div class="kpi-label">AI Alerts Today</div>
+        <div class="kpi-sparkline"><canvas></canvas></div>
+      </div>
+    </div>
+
+    <!-- Main 3-Column Grid — Fixed Height Balanced Layout -->
+    <div class="main-3col" style="margin-bottom:var(--space-lg);align-items:start">
+
+      <!-- Left: Heatmap + Quick Stats below -->
+      <div style="display:flex;flex-direction:column;gap:var(--space-md);min-width:0">
+        <div class="card stagger-item" style="padding:0;overflow:hidden">
+          <div class="card-header" style="padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--border)">
+            <div class="card-title">
+              <i data-lucide="map" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+              Karnataka Crime Heatmap
+            </div>
+            <a href="pages/heatmap.html" class="btn btn-ghost btn-sm">
+              Full Map <i data-lucide="external-link" style="width:12px;height:12px"></i>
+            </a>
+          </div>
+          <div class="map-container dashboard-map" id="dashboard-map" style="height:300px"></div>
+          <div class="map-legend" style="position:relative;bottom:auto;left:auto;margin:var(--space-sm) var(--space-md)">
+            <div style="display:flex;gap:var(--space-md);flex-wrap:wrap">
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#EF4444"></div>Critical</div>
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#F59E0B"></div>High</div>
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#3B82F6"></div>Medium</div>
+              <div class="map-legend-item"><div class="map-legend-dot" style="background:#22C55E"></div>Low</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time-of-Day Crime Distribution (fills leftover space) -->
+        <div class="card stagger-item delay-100" style="padding:var(--space-md)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-md)">
+            <div style="display:flex;align-items:center;gap:6px">
+              <i data-lucide="clock" style="width:14px;height:14px;color:#8B5CF6"></i>
+              <span style="font-size:0.75rem;font-weight:700;color:var(--text-primary)">Crime by Time of Day</span>
+            </div>
+            <span style="font-size:0.65rem;color:var(--text-muted)">Avg daily distribution</span>
+          </div>
+          <div id="tod-bars" style="display:flex;flex-direction:column;gap:7px">
+            <!-- JS populated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Trend + Donut charts -->
+      <div class="flex flex-col gap-lg" style="min-width:0">
+        <!-- Crime Trend -->
+        <div class="card stagger-item delay-100">
+          <div class="card-header">
+            <div class="card-title">
+              <i data-lucide="trending-up" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+              Crime Trends 2025
+            </div>
+            <div class="tabs" style="min-width:160px">
+              <button class="tab-btn active">Month</button>
+              <button class="tab-btn">Week</button>
+              <button class="tab-btn">Day</button>
+            </div>
+          </div>
+          <div class="trend-chart-wrap chart-appear">
+            <canvas id="dashboard-trend-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Crime Categories Donut -->
+        <div class="card stagger-item delay-200">
+          <div class="card-header">
+            <div class="card-title">
+              <i data-lucide="pie-chart" style="width:16px;height:16px;color:var(--accent-cyan)"></i>
+              Crime Categories
+            </div>
+          </div>
+          <div class="donut-wrap chart-appear">
+            <canvas id="dashboard-donut-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: AI Insights Panel (max-height constrained, scrollable) -->
+      <div class="card stagger-item delay-300" style="display:flex;flex-direction:column;max-height:660px">
+        <div class="card-header" style="flex-shrink:0">
+          <div class="card-title">
+            <i data-lucide="sparkles" style="width:16px;height:16px;color:var(--accent-cyan)"></i>
+            AI Insights
+          </div>
+          <span class="badge badge-critical" id="insight-badge">5 New</span>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:var(--space-md)" id="ai-insights-panel">
+          <!-- Populated by JS -->
+        </div>
+
+        <div style="padding:var(--space-sm) var(--space-md);border-top:1px solid var(--border);flex-shrink:0">
+          <a href="pages/investigation.html" class="btn btn-outline-blue w-full mt-sm">
+            <i data-lucide="bot" style="width:14px;height:14px"></i>
+            Open AI Investigation
+          </a>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- ── INTELLIGENCE HUB BOTTOM ─────────────────────────────────── -->
+
+    <!-- Section A: Operational Intelligence Row -->
+    <div class="grid-4-ops" style="margin-bottom:var(--space-lg);display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-md)">
+
+      <!-- Active Operations -->
+      <div class="card stagger-item" style="padding:var(--space-md)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-sm)">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="width:8px;height:8px;border-radius:50%;background:#22D3EE;animation:pulseDot 1.2s ease infinite"></div>
+            <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Active Operations</span>
+          </div>
+          <span class="badge badge-high" id="ops-count-badge">—</span>
+        </div>
+        <div style="font-size:2rem;font-weight:800;color:var(--text-primary);line-height:1" id="ops-total-count">—</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Live investigations</div>
+        <div style="margin-top:var(--space-sm);display:flex;flex-direction:column;gap:4px" id="ops-breakdown">
+          <div style="display:flex;justify-content:space-between;font-size:0.7rem"><span style="color:var(--text-secondary)">Investigating</span><span style="color:#F59E0B;font-weight:600" id="ops-investigating">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:0.7rem"><span style="color:var(--text-secondary)">Active</span><span style="color:#EF4444;font-weight:600" id="ops-active">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:0.7rem"><span style="color:var(--text-secondary)">Resolved Today</span><span style="color:#22C55E;font-weight:600" id="ops-resolved">—</span></div>
+        </div>
+      </div>
+
+      <!-- Live Crime Hotspots -->
+      <div class="card stagger-item delay-100" style="padding:var(--space-md)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:var(--space-sm)">
+          <i data-lucide="flame" style="width:14px;height:14px;color:#EF4444"></i>
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Top Hotspots</span>
+        </div>
+        <div id="ops-hotspots" style="display:flex;flex-direction:column;gap:6px">
+          <!-- JS populated -->
+        </div>
+      </div>
+
+      <!-- Criminal Network Alerts -->
+      <div class="card stagger-item delay-200" style="padding:var(--space-md)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:var(--space-sm)">
+          <i data-lucide="git-branch" style="width:14px;height:14px;color:#8B5CF6"></i>
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Network Alerts</span>
+        </div>
+        <div id="ops-network-alerts" style="display:flex;flex-direction:column;gap:6px">
+          <!-- JS populated -->
+        </div>
+      </div>
+
+      <!-- AI Prediction Summary -->
+      <div class="card stagger-item delay-300" style="padding:var(--space-md)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:var(--space-sm)">
+          <i data-lucide="brain-circuit" style="width:14px;height:14px;color:#22D3EE"></i>
+          <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">AI Predictions</span>
+        </div>
+        <div style="font-size:1.75rem;font-weight:800;color:var(--accent-cyan);line-height:1" id="ai-pred-count">—</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px">Forecast alerts (next 24h)</div>
+        <div style="margin-top:var(--space-sm)" id="ai-pred-top">
+          <!-- JS populated -->
+        </div>
+        <a href="pages/predictive.html" style="display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;color:var(--accent-blue);margin-top:var(--space-sm);text-decoration:none">
+          View forecast <i data-lucide="arrow-right" style="width:10px;height:10px"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Section B: AI Intelligence Feed + Enriched Incidents Table -->
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:var(--space-lg);margin-bottom:var(--space-lg);min-width:0">
+
+      <!-- Enriched Incidents Table -->
+      <div class="card stagger-item" style="min-width:0">
+        <div class="card-header">
+          <div class="card-title">
+            <i data-lucide="activity" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+            Recent Incidents
+            <div class="live-indicator" style="margin-left:var(--space-sm)">
+              <div class="live-dot"></div>
+              <span>Live</span>
+            </div>
+          </div>
+          <div class="flex gap-sm">
+            <button class="btn btn-secondary btn-sm" onclick="window.location.href='pages/analytics.html'">
+              <i data-lucide="filter" style="width:12px;height:12px"></i>
+              Filter
+            </button>
+            <a href="pages/analytics.html" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+        </div>
+        <div class="incidents-table-wrap">
+          <table class="data-table" id="incidents-table">
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Type</th>
+                <th>Location</th>
+                <th>Time</th>
+                <th>Status</th>
+                <th>AI Risk</th>
+                <th>Officer</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="incidents-tbody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Live AI Intelligence Feed -->
+      <div class="card stagger-item delay-100" style="display:flex;flex-direction:column;min-width:0">
+        <div class="card-header" style="flex-shrink:0">
+          <div class="card-title">
+            <i data-lucide="zap" style="width:16px;height:16px;color:#8B5CF6"></i>
+            AI Intelligence Feed
+          </div>
+          <div style="width:8px;height:8px;border-radius:50%;background:#22C55E;animation:pulseDot 1s ease infinite;flex-shrink:0"></div>
+        </div>
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:var(--space-md)" id="ai-intel-feed">
+          <!-- JS populated -->
+        </div>
+        <div style="padding:var(--space-sm) var(--space-md);border-top:1px solid var(--border);flex-shrink:0">
+          <a href="pages/alerts.html" class="btn btn-outline-blue w-full" style="font-size:0.75rem">
+            <i data-lucide="bell" style="width:12px;height:12px"></i>
+            View All Alerts
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section C: District Performance Grid -->
+    <div class="card stagger-item" style="margin-bottom:var(--space-lg)">
+      <div class="card-header">
+        <div class="card-title">
+          <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--accent-cyan)"></i>
+          District Intelligence Overview
+          <span style="font-size:0.7rem;color:var(--text-muted);margin-left:6px;font-weight:400">All 31 Karnataka Districts · AI Risk Scoring</span>
+        </div>
+        <a href="pages/district.html" class="btn btn-ghost btn-sm">Full Report</a>
+      </div>
+      <div id="district-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:var(--space-sm);padding:var(--space-md)">
+        <!-- JS populated -->
+      </div>
+    </div>
+
+
+
+  </main><!-- /main-content -->
+</div>
+
+<!-- Floating AI Button -->
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<!-- Scripts -->
+<script src="js/data.js"></script>
+<script src="js/db.js"></script>
+<script src="js/filter-engine.js"></script>
+<script src="js/search-engine.js"></script>
+<script src="js/query-engine.js"></script>
+<script src="js/risk-engine.js"></script>
+<script src="js/hotspot-detector.js"></script>
+<script src="js/network-analyzer.js"></script>
+<script src="js/app.js"></script>
+<script src="js/counters.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/map.js"></script>
+<script src="js/command.js"></script>
+<script src="js/briefing.js"></script>
+<script src="js/copilot.js"></script>
+<script src="js/realtime.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="ai/core/ai-config.js"></script>
+<script src="ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="ai/prediction/crime-predictor.js"></script>
+<script src="ai/hotspot/hotspot-engine.js"></script>
+<script src="ai/anomaly/anomaly-detector.js"></script>
+<script src="ai/network/network-intelligence.js"></script>
+<script src="ai/offender/offender-profiler.js"></script>
+<script src="ai/report/report-generator.js"></script>
+<script src="ai/explainability/explainer.js"></script>
+<script src="ai/decision/decision-support.js"></script>
+<script src="ai/chatbot/enhanced-chat.js"></script>
+<script src="ai/demo/demo-orchestrator.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="js/enterprise/main.js"></script>
+<script src="js/demo-bar.js"></script>
+
+
+<script>
+let trendChartInstance = null;
+let donutChartInstance = null;
+let mapInstance = null;
+let heatmapLayer = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+
+  // â”€â”€ Command Bar + Copilot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  KSPCopilot.replaceFAB();
+
+  // â”€â”€ Intelligence Briefing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  KSPBriefing.init('briefing-card-container');
+
+  // â”€â”€ Populate Live Intel Ticker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function populateTicker() {
+    const ticker = document.getElementById('ai-commentary-ticker');
+    if (!ticker) return;
+    const items = [];
+    // From DB
+    if (window.KSPDatabase) {
+      KSPDatabase.init();
+      const recent = KSPDatabase.incidents.filter(i => i.status === 'Active').slice(0, 8);
+      recent.forEach(inc => {
+        items.push(`<span class="ticker-item">ðŸ”´ <strong>${inc.caseNumber}</strong> Â· ${inc.crimeType} Â· ${inc.policeStation}, ${inc.district} Â· ${inc.time}</span>`);
+      });
+    }
+    // From AI Decision
+    if (window.KSPDecisionSupport) {
+      const result = KSPDecisionSupport.generate({ max: 4 });
+      result.recommendations.forEach(r => {
+        const icon = r.priority === 'CRITICAL' ? 'ðŸš¨' : r.priority === 'HIGH' ? 'âš ï¸' : 'ðŸ“Œ';
+        items.push(`<span class="ticker-item">${icon} AI: <strong>${r.action}</strong> Â· ${r.reason.replace(/\*\*/g,'').substring(0,60)}â€¦</span>`);
+      });
+    }
+    // Fallback
+    if (!items.length) {
+      items.push(
+        `<span class="ticker-item">ðŸ”´ <strong>CR-2025-BLR-7842</strong> Â· Vehicle Theft Â· Majestic, Bengaluru Urban</span>`,
+        `<span class="ticker-item">âš ï¸ AI Alert: <strong>Cybercrime surge detected</strong> in Shivajinagar zone</span>`,
+        `<span class="ticker-item">ðŸ“Œ Patrol Recommendation: Deploy units to Majestic bus terminal</span>`
+      );
+    }
+    // Duplicate for infinite scroll
+    const html = [...items, ...items].join('');
+    ticker.innerHTML = html;
+  }
+  populateTicker();
+
+  // â”€â”€ Map Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  mapInstance = KSPMap.initMap('dashboard-map', { zoom: 6 });
+
+  // â”€â”€ Charts Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  KSPCharts.applyDefaults();
+  trendChartInstance = KSPCharts.initTrendChart('dashboard-trend-chart');
+  donutChartInstance = KSPCharts.initDonutChart('dashboard-donut-chart');
+
+  // â”€â”€ Setup UI Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const selectDist = document.getElementById('filter-district');
+  const selectCrime = document.getElementById('filter-crime');
+  const selectStatus = document.getElementById('filter-status');
+  const selectTime = document.getElementById('filter-time');
+  const btnReset = document.getElementById('btn-reset-filters');
+
+  selectDist.addEventListener('change', (e) => KSPFilterEngine.setFilter('district', e.target.value));
+  selectCrime.addEventListener('change', (e) => KSPFilterEngine.setFilter('crimeType', e.target.value));
+  selectStatus.addEventListener('change', (e) => KSPFilterEngine.setFilter('status', e.target.value));
+  selectTime.addEventListener('change', (e) => KSPFilterEngine.setFilter('timeframe', e.target.value));
+
+  btnReset.addEventListener('click', () => {
+    selectDist.value = 'all';
+    selectCrime.value = 'all';
+    selectStatus.value = 'all';
+    selectTime.value = 'all';
+    KSPFilterEngine.resetFilters();
+  });
+
+  // â”€â”€ Refresh Dashboard Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function refreshDashboard() {
+    // API loading simulation delay for premium experience
+    const kpiElements = document.querySelectorAll('.kpi-value');
+    kpiElements.forEach(el => el.style.opacity = '0.5');
+
+    setTimeout(() => {
+      kpiElements.forEach(el => el.style.opacity = '1');
+
+      const filteredIncidents = KSPFilterEngine.query();
+      const metrics = KSPFilterEngine.getMetrics();
+      const chartData = KSPFilterEngine.getChartData();
+
+      // 1. Update KPI numbers with counting animations
+      // Use most recent date in DB, not hardcoded date
+      const allDates = filteredIncidents.map(i => i.date).sort();
+      const mostRecentDate = allDates[allDates.length - 1] || '';
+      const todayCount = filteredIncidents.filter(inc => inc.date === mostRecentDate).length || Math.round(metrics.total * 0.0046);
+      const activeCount = filteredIncidents.filter(inc => inc.status === 'Active' || inc.status === 'Investigating').length;
+      
+      // Calculate active repeat offenders
+      const roSet = new Set();
+      filteredIncidents.forEach(inc => {
+        if (inc.suspect && inc.suspect.repeatOffender && inc.suspect.id) {
+          roSet.add(inc.suspect.id);
+        }
+      });
+
+      // Recalculate High Risk Districts count dynamically
+      let highRiskCount = 0;
+      KSPDatabase.districts.forEach(d => {
+        const riskData = KSPRiskEngine.calculateDistrictRisk(d.name);
+        if (riskData.score >= 65) highRiskCount++;
+      });
+
+      const cards = document.querySelectorAll('.kpi-card');
+      if (cards.length >= 6) {
+        KSPCounters.animateCounter(cards[0].querySelector('.kpi-value'), todayCount || 47, 800);
+        KSPCounters.animateCounter(cards[1].querySelector('.kpi-value'), activeCount || metrics.active, 800);
+        KSPCounters.animateCounter(cards[2].querySelector('.kpi-value'), highRiskCount, 800);
+        KSPCounters.animateCounter(cards[3].querySelector('.kpi-value'), roSet.size || 312, 800);
+        KSPCounters.animateCounter(cards[5].querySelector('.kpi-value'), 23, 800); // alerts baseline
+      }
+
+      // 2. Update Risk Districts mini sidebar list
+      const distEl = document.getElementById('risk-districts-mini');
+      if (distEl) {
+        const topDistricts = KSPDatabase.districts.map(d => {
+          const risk = KSPRiskEngine.calculateDistrictRisk(d.name);
+          return { name: d.name, score: risk.score, level: risk.level };
+        }).sort((a,b) => b.score - a.score).slice(0, 4);
+
+        distEl.innerHTML = topDistricts.map(d => `
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-secondary">${d.name}</span>
+            <div class="flex items-center gap-sm">
+              <div style="width:60px;height:4px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden">
+                <div style="width:${d.score}%;height:100%;background:${d.level==='critical'?'#EF4444':'#F59E0B'};border-radius:99px"></div>
+              </div>
+              <span class="text-xs font-mono" style="color:${d.level==='critical'?'#EF4444':'#F59E0B'}">${d.score}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 3. Update Chart.js Monthly Trend Chart
+      if (trendChartInstance) {
+        // Query full historical trends (ignoring current timeframe filter) to prevent chart flatlining
+        const histChartData = KSPFilterEngine.getChartData({ timeframe: 'all', dateStart: null, dateEnd: null });
+        trendChartInstance.data.datasets[0].data = histChartData.monthlyTrends.total;
+        trendChartInstance.data.datasets[1].data = histChartData.monthlyTrends.solved;
+        trendChartInstance.data.datasets[2].data = histChartData.monthlyTrends.cyber;
+        trendChartInstance.update();
+      }
+
+      // 4. Update Chart.js Category Donut Chart
+      if (donutChartInstance) {
+        // Query stable category counts (ignoring timeframe) for a rich distribution
+        const catMetrics = KSPFilterEngine.getMetrics({ timeframe: 'all', dateStart: null, dateEnd: null });
+        const catCounts = KSPData.crimeCategories.map(cat => catMetrics.categoryCounts[cat.id] || 0);
+        donutChartInstance.data.datasets[0].data = catCounts;
+        donutChartInstance.update();
+      }
+
+      // 5. Update Enriched Incidents Table (with AI Risk column)
+      const tbody = document.getElementById('incidents-tbody');
+      if (tbody) {
+        const last10 = filteredIncidents.slice(0, 10);
+        if (last10.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted" style="padding:var(--space-xl)">No incidents match the active filters.</td></tr>`;
+        } else {
+          const statusMap = { 'Active': 'status-active', 'Investigating': 'status-resolving', 'Resolved': 'status-resolved', 'Arrested': 'status-arrested' };
+          const riskColor = (s) => s === 'critical' ? '#EF4444' : s === 'high' ? '#F59E0B' : s === 'medium' ? '#3B82F6' : '#22C55E';
+          const riskScore = (inc) => {
+            if (window.KSPRiskEngine && inc.district) {
+              const r = KSPRiskEngine.calculateDistrictRisk(inc.district);
+              return r ? r.score : 50;
+            }
+            const m = { critical: 88, high: 72, medium: 50, low: 28 };
+            return m[inc.severity] || 50;
+          };
+
+          tbody.innerHTML = last10.map(inc => {
+            const rs = riskScore(inc);
+            const rc = riskColor(inc.severity);
+            return `
+              <tr class="live-incident-row">
+                <td class="bold font-mono" style="color:var(--accent-blue)">${inc.id}</td>
+                <td class="bold">${inc.crimeType}</td>
+                <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${inc.policeStation}, ${inc.district}</td>
+                <td class="font-mono text-muted" style="font-size:0.75rem">${inc.time}</td>
+                <td><span class="status-pill ${statusMap[inc.status] || 'status-resolving'}">${inc.status}</span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <div style="width:36px;height:4px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden">
+                      <div style="width:${rs}%;height:100%;background:${rc};border-radius:99px"></div>
+                    </div>
+                    <span style="font-size:0.7rem;font-weight:700;color:${rc};font-family:monospace">${rs}</span>
+                  </div>
+                </td>
+                <td style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${inc.assignedOfficer}</td>
+                <td>
+                  <button class="btn btn-ghost btn-sm" onclick="window.location.href='pages/investigation.html?q=${encodeURIComponent(inc.id)}'">
+                    <i data-lucide="external-link" style="width:12px;height:12px"></i>
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+          lucide.createIcons({ nodes: [tbody] });
+        }
+      }
+
+      // 6. Redraw map markers / Heat points dynamically
+      if (mapInstance) {
+        if (heatmapLayer) mapInstance.removeLayer(heatmapLayer);
+        const heatPoints = KSPHotspotDetector.getHeatPoints(filteredIncidents);
+        if (heatPoints.length > 0 && window.L && L.heatLayer) {
+          heatmapLayer = L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 10 }).addTo(mapInstance);
+        }
+      }
+
+      // 7. Dynamic AI Insights update (Phase 4 Decision Support)
+      const insightsPanel = document.getElementById('ai-insights-panel');
+      const badge = document.getElementById('insight-badge');
+      if (insightsPanel && window.KSPDecisionSupport) {
+        const decisionResult = KSPDecisionSupport.generate({ max: 5 });
+        if (badge) {
+          badge.textContent = `${decisionResult.counts.critical} Critical`;
+          badge.className = decisionResult.counts.critical > 0 ? 'badge badge-critical' : 'badge badge-low';
+        }
+
+        insightsPanel.innerHTML = decisionResult.recommendations.map(rec => {
+          const iconName = rec.icon || 'alert-circle';
+          return `
+            <div class="insight-card ${rec.priority === 'CRITICAL' ? 'critical' : rec.priority === 'HIGH' ? 'high' : 'medium'}" style="margin-bottom:8px">
+              <div class="insight-icon ${rec.priority === 'CRITICAL' ? 'kpi-icon-red' : rec.priority === 'HIGH' ? 'kpi-icon-warn' : 'kpi-icon-blue'}">
+                <i data-lucide="${iconName}" style="width:15px;height:15px"></i>
+              </div>
+              <div class="insight-text" style="flex:1">
+                <div class="insight-title" style="font-weight:700;font-size:0.8125rem">${rec.action}</div>
+                <div class="insight-desc" style="font-size:0.75rem;color:var(--text-secondary);margin-top:2px">${rec.reason.replace(/\*\*/g, '')}</div>
+                <div class="insight-time" style="font-size:0.6875rem;color:var(--text-muted);margin-top:2px;display:flex;justify-content:between">
+                  <span>Priority: ${rec.priority}</span>
+                  <span style="margin-left:auto">${Math.round(rec.confidence * 100)}% confidence</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+        lucide.createIcons({ nodes: [insightsPanel] });
+      } else if (insightsPanel) {
+        insightsPanel.innerHTML = `<div class="text-center text-muted" style="padding:var(--space-md)">AI Decision Engine not loaded.</div>`;
+      }
+
+      // ── INTELLIGENCE HUB SECTIONS ─────────────────────────────────
+
+      // Section A: Operational Intelligence
+      const allInc = KSPDatabase ? KSPDatabase.incidents : filteredIncidents;
+      const investigating = allInc.filter(i => i.status === 'Investigating').length;
+      const activeOps = allInc.filter(i => i.status === 'Active').length;
+      const resolvedToday = allInc.filter(i => i.status === 'Resolved').slice(0, 18).length;
+      const totalOps = investigating + activeOps;
+
+      const opsTotal = document.getElementById('ops-total-count');
+      const opsBadge = document.getElementById('ops-count-badge');
+      const opsInv = document.getElementById('ops-investigating');
+      const opsAct = document.getElementById('ops-active');
+      const opsRes = document.getElementById('ops-resolved');
+      if (opsTotal) opsTotal.textContent = totalOps.toLocaleString('en-IN');
+      if (opsBadge) { opsBadge.textContent = totalOps > 1000 ? 'High Load' : 'Normal'; opsBadge.className = totalOps > 1000 ? 'badge badge-critical' : 'badge badge-medium'; }
+      if (opsInv) opsInv.textContent = investigating.toLocaleString('en-IN');
+      if (opsAct) opsAct.textContent = activeOps.toLocaleString('en-IN');
+      if (opsRes) opsRes.textContent = resolvedToday;
+
+      // Section A: Hotspots
+      const hotspotsEl = document.getElementById('ops-hotspots');
+      if (hotspotsEl && window.KSPDatabase) {
+        const topDist = KSPDatabase.districts.map(d => {
+          const r = KSPRiskEngine.calculateDistrictRisk(d.name);
+          return { name: d.name, score: r ? r.score : 50, level: r ? r.level : 'medium' };
+        }).sort((a,b) => b.score - a.score).slice(0, 3);
+
+        hotspotsEl.innerHTML = topDist.map(d => {
+          const c = d.level === 'critical' ? '#EF4444' : d.level === 'high' ? '#F59E0B' : '#3B82F6';
+          return `
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:0.75rem;color:var(--text-secondary);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</span>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                <div style="width:48px;height:3px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden">
+                  <div style="width:${d.score}%;height:100%;background:${c};border-radius:99px"></div>
+                </div>
+                <span style="font-size:0.7rem;font-weight:700;color:${c};font-family:monospace;min-width:22px;text-align:right">${d.score}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Section A: Network Alerts
+      const netAlertsEl = document.getElementById('ops-network-alerts');
+      if (netAlertsEl && window.KSPNetworkIntelligence) {
+        try {
+          const graph = KSPNetworkIntelligence.getGraph();
+          const topNodes = (graph.centralNodes || []).slice(0, 3);
+          if (topNodes.length) {
+            netAlertsEl.innerHTML = topNodes.map(n => `
+              <div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:6px">
+                <div style="width:6px;height:6px;border-radius:50%;background:#8B5CF6;flex-shrink:0"></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:0.7rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.label || n.id}</div>
+                  <div style="font-size:0.65rem;color:var(--text-muted)">Risk Score: ${Math.min(100, Math.round(n.centralityScore || 0))}/100</div>
+                </div>
+              </div>
+            `).join('');
+          } else {
+            netAlertsEl.innerHTML = `<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 0">No active network alerts</div>`;
+          }
+        } catch(e) {
+          netAlertsEl.innerHTML = `<div style="font-size:0.75rem;color:var(--text-muted)">Network analysis offline</div>`;
+        }
+      }
+
+      // Section A: AI Predictions
+      const predCountEl = document.getElementById('ai-pred-count');
+      const predTopEl = document.getElementById('ai-pred-top');
+      if (predCountEl) {
+        const predCount = Math.floor(Math.random() * 8) + 14; // 14–22 dynamic
+        predCountEl.textContent = predCount;
+      }
+      if (predTopEl) {
+        const predTypes = [
+          { type: 'Vehicle Theft', area: 'Bengaluru Urban', prob: 87 },
+          { type: 'Chain Snatching', area: 'Mysuru', prob: 74 },
+          { type: 'Burglary', area: 'Tumkuru', prob: 68 },
+        ];
+        predTopEl.innerHTML = predTypes.map(p => `
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:0.7rem;color:var(--text-secondary)">${p.type}</span>
+            <span style="font-size:0.65rem;font-weight:600;color:#22D3EE;font-family:monospace">${p.prob}%</span>
+          </div>
+        `).join('');
+      }
+
+      // Section B: AI Intelligence Feed
+      const feedEl = document.getElementById('ai-intel-feed');
+      if (feedEl && window.KSPDecisionSupport) {
+        const feedResult = KSPDecisionSupport.generate({ max: 8 });
+        const feedItems = feedResult.recommendations.map(rec => {
+          const timeAgo = Math.floor(Math.random() * 55) + 1;
+          const bdr = rec.priority === 'CRITICAL' ? 'rgba(239,68,68,0.35)' : rec.priority === 'HIGH' ? 'rgba(245,158,11,0.3)' : 'rgba(59,130,246,0.25)';
+          const clr = rec.priority === 'CRITICAL' ? '#EF4444' : rec.priority === 'HIGH' ? '#F59E0B' : '#3B82F6';
+          const icon = rec.priority === 'CRITICAL' ? '🚨' : rec.priority === 'HIGH' ? '⚠️' : '📌';
+          return `
+            <div style="padding:10px 12px;background:rgba(255,255,255,0.025);border:1px solid ${bdr};border-radius:8px;border-left:3px solid ${clr}">
+              <div style="display:flex;align-items:flex-start;gap:8px">
+                <span style="font-size:0.9rem;flex-shrink:0">${icon}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:0.75rem;font-weight:600;color:var(--text-primary);line-height:1.3">${rec.action}</div>
+                  <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${rec.reason.replace(/\*\*/g,'').substring(0, 70)}…</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px">
+                    <span style="font-size:0.62rem;color:var(--text-muted)">${timeAgo}m ago</span>
+                    <span style="font-size:0.62rem;font-weight:600;color:${clr}">${rec.priority}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        // Also add anomaly alerts
+        if (window.KSPAnomalyDetector) {
+          try {
+            const scan = KSPAnomalyDetector.getLastScan ? KSPAnomalyDetector.getLastScan() : KSPAnomalyDetector.scan();
+            if (scan && scan.anomalies) {
+              scan.anomalies.slice(0, 3).forEach(a => {
+                const timeAgo = Math.floor(Math.random() * 30) + 2;
+                feedItems.unshift(`
+                  <div style="padding:10px 12px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.25);border-radius:8px;border-left:3px solid #8B5CF6">
+                    <div style="display:flex;align-items:flex-start;gap:8px">
+                      <span style="font-size:0.9rem;flex-shrink:0">🔍</span>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--text-primary)">Anomaly: ${(a.crimeType || 'Unknown')} Pattern Detected</div>
+                        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${(a.description || '').replace(/\*\*/g,'').substring(0, 70)}</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px">
+                          <span style="font-size:0.62rem;color:var(--text-muted)">${timeAgo}m ago</span>
+                          <span style="font-size:0.62rem;font-weight:600;color:#8B5CF6">AI DETECTED</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `);
+              });
+            }
+          } catch(e) { /* silent */ }
+        }
+
+        feedEl.innerHTML = feedItems.slice(0, 8).join('');
+      }
+
+      // Section C: District Performance Grid
+      const distGridEl = document.getElementById('district-grid');
+      if (distGridEl && window.KSPDatabase && window.KSPRiskEngine) {
+        const districts = KSPDatabase.districts.map(d => {
+          const r = KSPRiskEngine.calculateDistrictRisk(d.name);
+          const incCount = allInc.filter(i => i.district === d.name).length;
+          const topCrimeMap = {};
+          allInc.filter(i => i.district === d.name).forEach(i => {
+            topCrimeMap[i.crimeType] = (topCrimeMap[i.crimeType] || 0) + 1;
+          });
+          const topCrime = Object.entries(topCrimeMap).sort((a,b) => b[1]-a[1])[0];
+          return {
+            name: d.name,
+            score: r ? r.score : 50,
+            level: r ? r.level : 'medium',
+            count: incCount,
+            topCrime: topCrime ? topCrime[0] : 'N/A'
+          };
+        }).sort((a,b) => b.score - a.score);
+
+        distGridEl.innerHTML = districts.map(d => {
+          const levelColor = d.level === 'critical' ? '#EF4444' : d.level === 'high' ? '#F59E0B' : d.level === 'medium' ? '#3B82F6' : '#22C55E';
+          const levelBg = d.level === 'critical' ? 'rgba(239,68,68,0.08)' : d.level === 'high' ? 'rgba(245,158,11,0.08)' : 'rgba(59,130,246,0.06)';
+          const arrow = d.score >= 70 ? '↑' : d.score >= 45 ? '→' : '↓';
+          const arrowColor = d.score >= 70 ? '#EF4444' : d.score >= 45 ? '#F59E0B' : '#22C55E';
+          return `
+            <div style="background:${levelBg};border:1px solid ${levelColor}30;border-radius:8px;padding:10px 12px;cursor:pointer;transition:all 0.2s" onmouseover="this.style.borderColor='${levelColor}70';this.style.transform='translateY(-1px)'" onmouseout="this.style.borderColor='${levelColor}30';this.style.transform=''" onclick="window.location.href='pages/district.html'">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                <span style="font-size:0.75rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${d.name}</span>
+                <span style="font-size:0.8rem;font-weight:700;color:${arrowColor};flex-shrink:0;margin-left:4px">${arrow}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <div style="flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden">
+                  <div style="width:${d.score}%;height:100%;background:${levelColor};border-radius:99px;transition:width 1s ease"></div>
+                </div>
+                <span style="font-size:0.65rem;font-weight:700;color:${levelColor};font-family:monospace;flex-shrink:0">${d.score}</span>
+              </div>
+              <div style="font-size:0.65rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.topCrime}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+    }, 350); // Simulate API latency
+  }
+
+  // Bind DB update and filter change listeners
+  window.addEventListener('ksp_filter_change', refreshDashboard);
+  window.addEventListener('ksp_db_update', refreshDashboard);
+
+  // Initial populate
+  refreshDashboard();
+
+  // â”€â”€ Start Real-time / Demo Mode Engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  KSPRealtime.start({
+    mapInstance: mapInstance
+  });
+
+  // â”€â”€ Phase 4: Start AI Demo Orchestrator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  if (window.KSPDemoOrchestrator) {
+    KSPDemoOrchestrator.start({
+      tickerContainerId: 'ai-commentary-ticker',
+      interval: 9000
+    });
+  }
+
+  // â”€â”€ Tab switching (Timeframe Selection) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const timeMapping = { 'Month': 'month', 'Week': 'week', 'Day': 'today' };
+      const tf = timeMapping[btn.textContent.trim()] || 'all';
+      KSPFilterEngine.setFilter('timeframe', tf);
+    });
+  });
+
+  // -- Fullscreen toggle
+  document.querySelector('[data-tooltip="Full Screen"]')?.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  });
+
+  // ══ IMPROVEMENT 1: Time-of-Day Crime Distribution ══════
+  function populateTimeOfDay() {
+    const todEl = document.getElementById('tod-bars');
+    if (!todEl || !window.KSPDatabase) return;
+    const allInc = KSPDatabase.incidents;
+    const slots = [
+      { label: 'Night  00–06', hours: [0,1,2,3,4,5], color: '#8B5CF6' },
+      { label: 'Morning 06–12', hours: [6,7,8,9,10,11], color: '#3B82F6' },
+      { label: 'Afternoon 12–18', hours: [12,13,14,15,16,17], color: '#F59E0B' },
+      { label: 'Evening 18–24', hours: [18,19,20,21,22,23], color: '#EF4444' },
+    ];
+    const counts = slots.map(s => ({
+      ...s,
+      count: allInc.filter(i => {
+        const h = parseInt((i.time || '00:00').split(':')[0]);
+        return s.hours.includes(h);
+      }).length
+    }));
+    const max = Math.max(...counts.map(c => c.count), 1);
+    todEl.innerHTML = counts.map(s => `
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:0.68rem;color:var(--text-secondary)">${s.label}</span>
+          <span style="font-size:0.68rem;font-weight:700;color:${s.color};font-family:monospace">${s.count.toLocaleString('en-IN')}</span>
+        </div>
+        <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+          <div style="width:${Math.round((s.count/max)*100)}%;height:100%;background:${s.color};border-radius:99px;transition:width 1.2s ease"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+  setTimeout(populateTimeOfDay, 600);
+
+  // ══ IMPROVEMENT 2: District Grid Sort Toggle ════════════
+  setTimeout(() => {
+    const distCard = document.getElementById('district-grid')?.closest('.card');
+    if (!distCard) return;
+    const hdr = distCard.querySelector('.card-header');
+    if (!hdr) return;
+    const sortBar = document.createElement('div');
+    sortBar.style.cssText = 'display:flex;gap:4px;align-items:center';
+    sortBar.innerHTML = `
+      <span style="font-size:0.65rem;color:var(--text-muted);margin-right:2px">Sort:</span>
+      <button id="dsort-risk"  style="font-size:0.65rem;padding:2px 8px;border-radius:99px;border:1px solid rgba(59,130,246,0.5);background:rgba(59,130,246,0.12);color:var(--accent-blue);cursor:pointer;font-weight:700">Risk</button>
+      <button id="dsort-cases" style="font-size:0.65rem;padding:2px 8px;border-radius:99px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text-muted);cursor:pointer">Cases</button>
+      <button id="dsort-alpha" style="font-size:0.65rem;padding:2px 8px;border-radius:99px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text-muted);cursor:pointer">A–Z</button>
+    `;
+    hdr.appendChild(sortBar);
+
+    function activateSort(id) {
+      ['dsort-risk','dsort-cases','dsort-alpha'].forEach(sid => {
+        const el = document.getElementById(sid);
+        if (!el) return;
+        const active = sid === id;
+        el.style.borderColor = active ? 'rgba(59,130,246,0.5)' : 'rgba(255,255,255,0.1)';
+        el.style.background = active ? 'rgba(59,130,246,0.12)' : 'transparent';
+        el.style.color = active ? 'var(--accent-blue)' : 'var(--text-muted)';
+        el.style.fontWeight = active ? '700' : '400';
+      });
+    }
+    function resortDistricts(sortKey) {
+      activateSort('dsort-' + sortKey);
+      const gridEl = document.getElementById('district-grid');
+      if (!gridEl || !window.KSPDatabase) return;
+      const cards = Array.from(gridEl.children);
+      cards.sort((a, b) => {
+        const nameA = a.querySelector('span')?.textContent?.trim() || '';
+        const nameB = b.querySelector('span')?.textContent?.trim() || '';
+        if (sortKey === 'alpha') return nameA.localeCompare(nameB);
+        if (sortKey === 'cases') {
+          const ca = KSPDatabase.incidents.filter(i => i.district === nameA).length;
+          const cb = KSPDatabase.incidents.filter(i => i.district === nameB).length;
+          return cb - ca;
+        }
+        const sa = parseFloat(a.querySelectorAll('span')[1]?.textContent || '0');
+        const sb = parseFloat(b.querySelectorAll('span')[1]?.textContent || '0');
+        return sb - sa;
+      });
+      cards.forEach(c => gridEl.appendChild(c));
+    }
+    document.getElementById('dsort-risk')?.addEventListener('click', () => resortDistricts('risk'));
+    document.getElementById('dsort-cases')?.addEventListener('click', () => resortDistricts('cases'));
+    document.getElementById('dsort-alpha')?.addEventListener('click', () => resortDistricts('alpha'));
+  }, 800);
+
+  // ══ IMPROVEMENT 3: AI Feed Live Auto-Refresh (28s) ══════
+  (function startFeedAutoRefresh() {
+    const liveAlerts = [
+      { icon:'🚨', msg:'CRITICAL: Gang activity surge near Majestic Bus Terminal — 3 incidents in 40 min', priority:'CRITICAL', color:'#EF4444', bdr:'rgba(239,68,68,0.35)' },
+      { icon:'🔍', msg:'AI Anomaly: Repeat-offender clustering in Shivajinagar — pattern match 91%', priority:'AI DETECTED', color:'#8B5CF6', bdr:'rgba(139,92,246,0.3)' },
+      { icon:'⚠️', msg:'HIGH: Vehicle theft series — 4 cases share MO in Whitefield zone', priority:'HIGH', color:'#F59E0B', bdr:'rgba(245,158,11,0.3)' },
+      { icon:'🔍', msg:'AI Anomaly: Cybercrime spike +38% — SMS phishing campaign identified', priority:'AI DETECTED', color:'#8B5CF6', bdr:'rgba(139,92,246,0.3)' },
+      { icon:'🚨', msg:'CRITICAL: Chain snatching cluster — 6 incidents, 2-km radius, Mysuru Old City', priority:'CRITICAL', color:'#EF4444', bdr:'rgba(239,68,68,0.35)' },
+      { icon:'📌', msg:'MEDIUM: Patrol gap on NH-48 — no coverage window 02:00–04:00 hrs', priority:'MEDIUM', color:'#3B82F6', bdr:'rgba(59,130,246,0.25)' },
+    ];
+    const styleEl = document.createElement('style');
+    styleEl.textContent = '@keyframes feedSlideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}.feed-new{animation:feedSlideIn 0.4s ease forwards}';
+    document.head.appendChild(styleEl);
+
+    let idx = 0;
+    setInterval(() => {
+      const feedEl = document.getElementById('ai-intel-feed');
+      if (!feedEl) return;
+      const a = liveAlerts[idx++ % liveAlerts.length];
+      const div = document.createElement('div');
+      div.className = 'feed-new';
+      div.style.cssText = `padding:10px 12px;background:rgba(255,255,255,0.025);border:1px solid ${a.bdr};border-radius:8px;border-left:3px solid ${a.color}`;
+      div.innerHTML = `<div style="display:flex;align-items:flex-start;gap:8px"><span style="font-size:0.9rem;flex-shrink:0">${a.icon}</span><div style="flex:1;min-width:0"><div style="font-size:0.75rem;font-weight:600;color:var(--text-primary);line-height:1.3">${a.msg}</div><div style="display:flex;align-items:center;justify-content:space-between;margin-top:5px"><span style="font-size:0.62rem;color:var(--text-muted)">just now</span><span style="font-size:0.62rem;font-weight:600;color:${a.color}">${a.priority}</span></div></div></div>`;
+      feedEl.prepend(div);
+      while (feedEl.children.length > 10) feedEl.removeChild(feedEl.lastChild);
+    }, 28000);
+  })();
+
+});
+</script>
+</body>
+<!-- AI Intelligence Overlay: Smart Anomaly Engine + CoPilot -->
+<script src="js/ai-intelligence-overlay.js"></script>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .reports-layout { display:grid; grid-template-columns:1fr 380px; gap:var(--space-lg); }
+    @media(max-width:1280px){ .reports-layout{grid-template-columns:1fr} .preview-panel{display:none} }
+    .report-templates { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-lg); }
+    @media(max-width:1440px){ .report-templates{grid-template-columns:repeat(2,1fr)} }
+    @media(max-width:768px) { .report-templates{grid-template-columns:1fr} }
+    .preview-panel {
+      background:var(--card-bg);
+      border:1px solid var(--border);
+      border-radius:var(--radius-lg);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .report-preview-content {
+      flex:1;
+      overflow-y:auto;
+      padding:var(--space-xl);
+      font-size:0.8125rem;
+      line-height:1.8;
+      color:var(--text-secondary);
+    }
+    .report-preview-content h2 {
+      font-size:1rem;
+      font-weight:700;
+      color:var(--text-primary);
+      margin:var(--space-md) 0 var(--space-sm);
+    }
+    .report-preview-content h2:first-child { margin-top:0; }
+    .report-selected { border-color:var(--border-accent); box-shadow:var(--shadow-glow-blue); }
+    .generate-progress {
+      display:none;
+      height:3px;
+      background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan));
+      border-radius:99px;
+      animation:shimmer 1.5s linear infinite;
+      background-size:200% 100%;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item active" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Reports <span>/ Generator</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="global-search" placeholder="Search reports…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="file-text" style="width:24px;height:24px;color:var(--accent-blue)"></i> Intelligence Report Generator</h1>
+        <p class="page-header-sub">AI-generated reports · District analysis · Export to PDF</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" id="export-pdf-btn" onclick="window.print()">
+          <i data-lucide="file-down" style="width:14px;height:14px"></i>
+          Export PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Config Bar -->
+    <div class="card card-sm stagger-item" style="margin-bottom:var(--space-lg)">
+      <div class="flex gap-md flex-wrap items-center">
+        <div class="flex gap-sm items-center text-sm text-muted"><i data-lucide="calendar" style="width:14px;height:14px"></i> Report Period:</div>
+        <select class="form-control" style="width:auto">
+          <option>Today</option>
+          <option>This Week</option>
+          <option selected>This Month (June 2025)</option>
+          <option>This Quarter</option>
+          <option>Custom Range</option>
+        </select>
+        <div class="flex gap-sm items-center text-sm text-muted"><i data-lucide="map-pin" style="width:14px;height:14px"></i> District:</div>
+        <select class="form-control" style="width:auto">
+          <option>All Karnataka</option>
+          <option>Bengaluru Urban</option>
+          <option>Mysuru</option>
+          <option>Belagavi</option>
+        </select>
+        <div class="flex gap-sm items-center text-sm text-muted"><i data-lucide="user" style="width:14px;height:14px"></i> Prepared by:</div>
+        <select class="form-control" style="width:auto">
+          <option>DCP Sanjay Gupta</option>
+          <option>SP Meena Krishnan</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="reports-layout">
+      <!-- Report Templates -->
+      <div>
+        <div class="section-label" style="margin-bottom:var(--space-md)">Report Templates</div>
+        <div class="report-templates" id="report-templates-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Recent Reports -->
+        <div class="section-label" style="margin-top:var(--space-xl);margin-bottom:var(--space-md)">Recent Reports</div>
+        <div class="card card-sm">
+          <table class="data-table">
+            <thead><tr><th>Report Name</th><th>Type</th><th>Generated By</th><th>Date</th><th>Action</th></tr></thead>
+            <tbody>
+              <tr><td class="bold">June 2025 Crime Summary</td><td><span class="badge badge-info">Executive</span></td><td>DCP Sanjay Gupta</td><td class="font-mono text-muted" style="font-size:0.75rem">01 Jul 2025</td><td><button class="btn btn-ghost btn-sm" onclick="window.print()"><i data-lucide="download" style="width:12px;height:12px"></i></button></td></tr>
+              <tr><td class="bold">BLR Urban Hotspot Report</td><td><span class="badge badge-critical">Hotspot</span></td><td>SP Kumar R.</td><td class="font-mono text-muted" style="font-size:0.75rem">28 Jun 2025</td><td><button class="btn btn-ghost btn-sm" onclick="window.print()"><i data-lucide="download" style="width:12px;height:12px"></i></button></td></tr>
+              <tr><td class="bold">Cybercrime Trend Q2</td><td><span class="badge badge-medium">Trend</span></td><td>SI Priya M.</td><td class="font-mono text-muted" style="font-size:0.75rem">25 Jun 2025</td><td><button class="btn btn-ghost btn-sm" onclick="window.print()"><i data-lucide="download" style="width:12px;height:12px"></i></button></td></tr>
+              <tr><td class="bold">Repeat Offender Registry</td><td><span class="badge badge-high">Offender</span></td><td>CI Ramesh B.</td><td class="font-mono text-muted" style="font-size:0.75rem">20 Jun 2025</td><td><button class="btn btn-ghost btn-sm" onclick="window.print()"><i data-lucide="download" style="width:12px;height:12px"></i></button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Preview Panel -->
+      <div class="preview-panel">
+        <div style="padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div class="card-title"><i data-lucide="eye" style="width:14px;height:14px;color:var(--accent-blue)"></i> Preview</div>
+          <button class="btn btn-primary btn-sm" onclick="window.print()">
+            <i data-lucide="file-down" style="width:12px;height:12px"></i> Export PDF
+          </button>
+        </div>
+        <div class="generate-progress" id="gen-progress"></div>
+        <div class="report-preview-content" id="report-preview">
+          <div style="text-align:center;margin-bottom:var(--space-xl)">
+            <div style="font-size:0.625rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-muted)">KARNATAKA STATE POLICE</div>
+            <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin:8px 0">AI Crime Intelligence Report</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">June 2025 · All Districts</div>
+            <div style="height:2px;background:linear-gradient(90deg,transparent,var(--accent-blue),transparent);margin:16px 0"></div>
+          </div>
+          <h2>1. Executive Summary</h2>
+          <p>This month recorded <strong style="color:var(--critical)">7,841 total crimes</strong> across Karnataka, representing an 18.4% increase over the previous period. Bengaluru Urban remains the highest-risk district with 1,247 incidents.</p>
+          <h2>2. Crime Distribution</h2>
+          <p>Financial Fraud (27.9%) continues to lead all categories, followed by Vehicle Theft (23.6%) and Cybercrime (15.7%). The cybercrime category shows the highest growth trajectory at +34.7% year-over-year.</p>
+          <h2>3. High-Risk Districts</h2>
+          <p>Five districts have been classified as HIGH or CRITICAL risk: Bengaluru Urban (Score: 94), Mysuru (78), Kalaburagi (73), Belagavi (71), and Hubballi-Dharwad (67).</p>
+          <h2>4. AI Predictions</h2>
+          <p>The KSP-PredictV2 model forecasts a continued 28% increase in vehicle theft in Bengaluru Urban over the next 48 hours, and a 22% increase in narcotics activity along the Belagavi corridor.</p>
+          <h2>5. Recommendations</h2>
+          <p>Deploy 4 additional patrol units to Shivajinagar and Majestic areas. Issue cybercrime advisory to public and financial institutions. Activate inter-district coordination on Belagavi-Hubballi corridor.</p>
+          <div style="margin-top:var(--space-xl);padding-top:var(--space-md);border-top:1px solid var(--border);font-size:0.6875rem;color:var(--text-muted);text-align:center">
+            Confidential · KSP AI Intelligence Platform · Generated: ${new Date().toLocaleDateString('en-IN')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<script src="../js/hotspot-detector.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/hotspot/hotspot-engine.js"></script>
+<script src="../ai/anomaly/anomaly-detector.js"></script>
+<script src="../ai/network/network-intelligence.js"></script>
+<script src="../ai/offender/offender-profiler.js"></script>
+<script src="../ai/report/report-generator.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../ai/decision/decision-support.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+const REPORT_TEMPLATES = [
+  { id:'district', icon:'map-pin', title:'District Crime Report', desc:'Complete district-level breakdown with incident stats, trends, and officer deployment.', color:'var(--accent-blue)', badge:'badge-medium' },
+  { id:'trend', icon:'trending-up', title:'Crime Trend Report', desc:'Monthly and quarterly trend analysis with category breakdown and forecasts.', color:'var(--accent-cyan)', badge:'badge-info' },
+  { id:'hotspot', icon:'flame', title:'Hotspot Analysis Report', desc:'Geospatial hotspot map with cluster analysis and patrol recommendations.', color:'var(--critical)', badge:'badge-critical' },
+  { id:'offender', icon:'user-x', title:'Repeat Offender Report', desc:'Registry of high-risk repeat offenders with crime history and risk scores.', color:'var(--warning)', badge:'badge-high' },
+  { id:'network', icon:'git-branch', title:'Criminal Network Report', desc:'Association mapping of criminal networks with key suspect profiles.', color:'var(--accent-violet)', badge:'badge-medium' },
+  { id:'executive', icon:'briefcase', title:'Executive Summary', desc:'DGP-level one-page briefing with KPIs, critical alerts, and action items.', color:'var(--success)', badge:'badge-low' },
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // Handle URL query parameter pre-selection
+  const urlParams = new URLSearchParams(window.location.search);
+  const selectedType = urlParams.get('type') || 'executive';
+
+  const grid = document.getElementById('report-templates-grid');
+  if (grid) {
+    grid.innerHTML = REPORT_TEMPLATES.map((r,i) => `
+      <div class="report-card stagger-item ${r.id === selectedType ? 'report-selected' : ''}" onclick="selectReport('${r.id}')" id="rt-${r.id}" style="delay:${i*100}ms">
+        <div class="flex items-center justify-between">
+          <div class="report-card-icon" style="background:${r.color}18">
+            <i data-lucide="${r.icon}" style="width:20px;height:20px;color:${r.color}"></i>
+          </div>
+          <span class="badge ${r.badge}">AI</span>
+        </div>
+        <div>
+          <div class="font-semibold text-sm text-primary">${r.title}</div>
+          <div class="text-xs text-muted mt-xs">${r.desc}</div>
+        </div>
+        <button class="btn btn-primary btn-sm w-full" onclick="generateReport('${r.id}');event.stopPropagation()">
+          <i data-lucide="sparkles" style="width:12px;height:12px"></i>
+          Generate
+        </button>
+      </div>
+    `).join('');
+    lucide.createIcons({ nodes: [grid] });
+  }
+
+  // Pre-generate the URL-requested report preview
+  generateReport(selectedType);
+
+  setTimeout(() => {
+    document.querySelectorAll('.stagger-item').forEach((el,i) => {
+      setTimeout(() => el.classList.add('visible'), i*80);
+    });
+  }, 100);
+});
+
+function selectReport(id) {
+  document.querySelectorAll('.report-card').forEach(c => c.classList.remove('report-selected'));
+  document.getElementById('rt-'+id)?.classList.add('report-selected');
+}
+
+function generateReport(id) {
+  selectReport(id);
+  const prog = document.getElementById('gen-progress');
+  if (prog) prog.style.display = 'block';
+
+  const preview = document.getElementById('report-preview');
+
+  setTimeout(() => {
+    if (prog) prog.style.display = 'none';
+    if (preview && window.KSPReportGenerator) {
+      // Generate actual AI report of specified type using the AI engine
+      const report = KSPReportGenerator.generate(id);
+      preview.innerHTML = KSPReportGenerator.renderHTML(report);
+      showToast('AI Intelligence Report compiled successfully.', 'success');
+      
+      // If lucide is available, refresh icons in preview window
+      if (window.lucide) {
+        lucide.createIcons({ nodes: [preview] });
+      }
+    } else if (preview) {
+      preview.innerHTML = `<div class="text-center text-muted" style="padding:var(--space-xl)">Report engine not loaded.</div>`;
+    }
+  }, 800);
+}
+</script>
+</body>
+</html>

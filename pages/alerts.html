@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .alerts-layout { display:grid; grid-template-columns:220px 1fr; gap:var(--space-lg); }
+    @media(max-width:1024px){ .alerts-layout{grid-template-columns:1fr} .alerts-sidebar{display:none} }
+    .alert-filter-item {
+      display:flex;align-items:center;gap:var(--space-sm);padding:9px var(--space-md);
+      border-radius:var(--radius-md);cursor:pointer;font-size:0.875rem;
+      color:var(--text-secondary);transition:all var(--transition-fast);
+      margin-bottom:2px;
+    }
+    .alert-filter-item:hover { background:rgba(255,255,255,0.04); color:var(--text-primary); }
+    .alert-filter-item.active { background:var(--accent-blue-dim); color:var(--accent-blue); }
+    .alert-filter-count {
+      margin-left:auto;font-size:0.6875rem;font-weight:700;
+      background:rgba(255,255,255,0.08);border-radius:99px;
+      padding:2px 7px;min-width:20px;text-align:center;
+    }
+    .alert-filter-item.active .alert-filter-count { background:rgba(59,130,246,0.2); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item active" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Alerts <span>/ Notification Center</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="global-search" placeholder="Search alerts…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="bell" style="width:24px;height:24px;color:var(--warning)"></i> Alert Center</h1>
+        <p class="page-header-sub">Real-time operational alerts · AI-generated threat notifications · Officer action required</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary btn-sm" id="mark-all-read">
+          <i data-lucide="check-check" style="width:13px;height:13px"></i> Mark All Read
+        </button>
+        <button class="btn btn-secondary btn-sm">
+          <i data-lucide="settings" style="width:13px;height:13px"></i> Alert Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert Summary Strip -->
+    <div class="flex gap-md stagger-item" style="margin-bottom:var(--space-lg);flex-wrap:wrap" id="alert-summary-strip">
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:130px;border-color:rgba(239,68,68,0.2)">
+        <div class="kpi-icon-wrap kpi-icon-red"><i data-lucide="alert-octagon" style="width:18px;height:18px"></i></div>
+        <div><div class="text-xl font-black" style="color:var(--critical)" id="count-critical">—</div><div class="text-xs text-muted">Critical</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:130px;border-color:rgba(245,158,11,0.2)">
+        <div class="kpi-icon-wrap kpi-icon-warn"><i data-lucide="alert-triangle" style="width:18px;height:18px"></i></div>
+        <div><div class="text-xl font-black" style="color:var(--warning)" id="count-high">—</div><div class="text-xs text-muted">High</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:130px">
+        <div class="kpi-icon-wrap kpi-icon-blue"><i data-lucide="info" style="width:18px;height:18px"></i></div>
+        <div><div class="text-xl font-black text-primary" id="count-medium">—</div><div class="text-xs text-muted">Medium</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:130px">
+        <div class="kpi-icon-wrap kpi-icon-green"><i data-lucide="check-circle" style="width:18px;height:18px"></i></div>
+        <div><div class="text-xl font-black text-primary" id="count-low">—</div><div class="text-xs text-muted">Low</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:130px">
+        <div class="kpi-icon-wrap" style="background:rgba(255,255,255,0.05);color:var(--text-muted)"><i data-lucide="bell-off" style="width:18px;height:18px"></i></div>
+        <div><div class="text-xl font-black text-primary" id="count-read">—</div><div class="text-xs text-muted">Read</div></div>
+      </div>
+    </div>
+
+    <div class="alerts-layout">
+      <!-- Sidebar Filters -->
+      <div class="alerts-sidebar">
+        <div class="card card-sm">
+          <div class="card-title mb-md"><i data-lucide="filter" style="width:14px;height:14px;color:var(--accent-blue)"></i> Filter</div>
+
+          <div class="section-label">Status</div>
+          <div class="alert-filter-item active" data-filter="all"><i data-lucide="list" style="width:14px;height:14px"></i> All Alerts <span class="alert-filter-count">8</span></div>
+          <div class="alert-filter-item" data-filter="unread"><i data-lucide="circle" style="width:14px;height:14px"></i> Unread <span class="alert-filter-count">5</span></div>
+          <div class="alert-filter-item" data-filter="read"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Read <span class="alert-filter-count">3</span></div>
+
+          <div class="divider"></div>
+          <div class="section-label">Severity</div>
+          <div class="alert-filter-item" data-filter="critical"><span style="width:10px;height:10px;background:var(--critical);border-radius:50%;flex-shrink:0"></span> Critical <span class="alert-filter-count" style="color:var(--critical)">2</span></div>
+          <div class="alert-filter-item" data-filter="high"><span style="width:10px;height:10px;background:var(--warning);border-radius:50%;flex-shrink:0"></span> High <span class="alert-filter-count" style="color:var(--warning)">2</span></div>
+          <div class="alert-filter-item" data-filter="medium"><span style="width:10px;height:10px;background:var(--accent-blue);border-radius:50%;flex-shrink:0"></span> Medium <span class="alert-filter-count">2</span></div>
+          <div class="alert-filter-item" data-filter="low"><span style="width:10px;height:10px;background:var(--success);border-radius:50%;flex-shrink:0"></span> Low <span class="alert-filter-count">2</span></div>
+
+          <div class="divider"></div>
+          <div class="section-label">Category</div>
+          <div class="alert-filter-item" data-filter="Spike"><i data-lucide="trending-up" style="width:13px;height:13px"></i> Crime Spike</div>
+          <div class="alert-filter-item" data-filter="Network"><i data-lucide="git-branch" style="width:13px;height:13px"></i> Network</div>
+          <div class="alert-filter-item" data-filter="Offender"><i data-lucide="user-x" style="width:13px;height:13px"></i> Offender</div>
+          <div class="alert-filter-item" data-filter="Cyber"><i data-lucide="wifi" style="width:13px;height:13px"></i> Cybercrime</div>
+          <div class="alert-filter-item" data-filter="Patrol"><i data-lucide="navigation" style="width:13px;height:13px"></i> Patrol</div>
+          <div class="alert-filter-item" data-filter="System"><i data-lucide="cpu" style="width:13px;height:13px"></i> System</div>
+        </div>
+      </div>
+
+      <!-- Alert Cards -->
+      <div class="flex flex-col gap-md" id="alerts-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/anomaly/anomaly-detector.js"></script>
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+const ALERT_ICONS = {
+  Spike: 'trending-up', Network: 'git-branch', Offender: 'user-x',
+  Cyber: 'wifi', Patrol: 'navigation', Report: 'file-text', System: 'cpu',
+  anomaly: 'alert-triangle', prediction: 'brain-circuit', unusual_location: 'map-pin',
+  unusual_timing: 'clock', offender_activity: 'user-x'
+};
+
+let activeFilter = 'all';
+let alerts = [];
+
+
+function renderAlerts(data) {
+  const container = document.getElementById('alerts-list');
+  if (!container) return;
+
+  if (data.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon"><i data-lucide="bell-off"></i></div><p>No alerts match the selected filter</p></div>`;
+    lucide.createIcons({ nodes: [container] });
+    return;
+  }
+
+  container.innerHTML = data.map((alert) => `
+    <div class="alert-card severity-${alert.severity} stagger-item ${alert.read ? 'read' : ''}"
+         id="alert-${alert.id}"
+         style="${alert.read ? 'opacity:0.65' : ''}">
+      <!-- Unread dot -->
+      ${!alert.read ? `<div style="position:absolute;top:var(--space-md);right:var(--space-md);width:8px;height:8px;border-radius:50%;background:var(--${alert.severity==='critical'?'critical':alert.severity==='high'?'warning':'accent-blue'});animation:pulseDot 1.5s ease infinite"></div>` : ''}
+
+      <div class="alert-icon-wrap alert-icon-${alert.severity}">
+        <i data-lucide="${ALERT_ICONS[alert.category] || 'bell'}" style="width:16px;height:16px"></i>
+      </div>
+
+      <div class="alert-body">
+        <div class="alert-title">${alert.title}</div>
+        <div class="alert-msg">${alert.message || alert.desc}</div>
+        <div class="alert-meta">
+          <span class="badge ${alert.severity==='critical'?'badge-critical':alert.severity==='high'?'badge-high':alert.severity==='medium'?'badge-medium':'badge-low'}">${alert.severity.toUpperCase()}</span>
+          <span class="badge badge-neutral">${alert.category}</span>
+          <span class="alert-time">${alert.time}</span>
+          ${alert.district ? `<span class="badge badge-neutral"><i data-lucide="map-pin" style="width:10px;height:10px;display:inline;vertical-align:middle"></i> ${alert.district}</span>` : ''}
+        </div>
+        
+        <!-- Advanced Tactical Actions -->
+        <div class="flex gap-sm mt-md">
+          <button class="btn btn-primary btn-sm" onclick="investigateAlert('${alert.title}')">
+            <i data-lucide="bot" style="width:12px;height:12px"></i> Investigate
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="assignOfficer('${alert.id}')">
+            <i data-lucide="user-check" style="width:12px;height:12px"></i> Assign Officer
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="window.location.href='reports.html'">
+            <i data-lucide="file-text" style="width:12px;height:12px"></i> Generate Report
+          </button>
+        </div>
+      </div>
+
+      <div class="alert-actions">
+        ${!alert.read ? `<button class="btn btn-ghost btn-icon" onclick="markRead('${alert.id}')" data-tooltip="Mark Read">
+          <i data-lucide="check" style="width:14px;height:14px"></i>
+        </button>` : ''}
+        <button class="btn btn-ghost btn-icon" onclick="dismissAlert('${alert.id}')" data-tooltip="Dismiss">
+          <i data-lucide="x" style="width:14px;height:14px"></i>
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  lucide.createIcons({ nodes: [container] });
+  
+  // Trigger stagger
+  setTimeout(() => {
+    container.querySelectorAll('.stagger-item').forEach((el,i) => {
+      setTimeout(() => el.classList.add('visible'), i*50);
+    });
+  }, 50);
+}
+
+function investigateAlert(title) {
+  window.location.href = `investigation.html?q=${encodeURIComponent('Analyze alert: ' + title)}`;
+}
+
+function assignOfficer(alertId) {
+  showToast(`Simulated unit dispatch for alert ${alertId}.`, 'success');
+}
+
+function markRead(id) {
+  const alert = alerts.find(a => a.id === id);
+  if (alert) alert.read = true;
+  applyFilter();
+}
+
+function dismissAlert(id) {
+  alerts = alerts.filter(a => a.id !== id);
+  applyFilter();
+}
+
+function applyFilter() {
+  let filtered = alerts;
+  if (activeFilter === 'unread') filtered = alerts.filter(a => !a.read);
+  else if (activeFilter === 'read') filtered = alerts.filter(a => a.read);
+  else if (['critical','high','medium','low'].includes(activeFilter)) filtered = alerts.filter(a => a.severity === activeFilter);
+  else if (['Spike','Network','Offender','Cyber','Patrol','Report','System'].includes(activeFilter)) filtered = alerts.filter(a => a.category === activeFilter);
+  renderAlerts(filtered);
+  updateAlertCounts();
+}
+
+function updateAlertCounts() {
+  const c = { critical:0, high:0, medium:0, low:0, read:0 };
+  alerts.forEach(a => {
+    if (a.read) c.read++;
+    else if (c[a.severity] !== undefined) c[a.severity]++;
+  });
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('count-critical', c.critical);
+  set('count-high', c.high);
+  set('count-medium', c.medium);
+  set('count-low', c.low);
+  set('count-read', c.read);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // Load baseline static alerts
+  alerts = JSON.parse(JSON.stringify(KSPData.alerts));
+
+  // ── Inject AI Anomaly Alerts ─────────────────────────────
+  if (window.KSPAnomalyDetector) {
+    const scan = KSPAnomalyDetector.scan();
+    const aiAlerts = scan.anomalies.map((a, i) => ({
+      id: `AI-ANOM-${i}`,
+      title: `AI Anomaly: ${a.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`,
+      message: a.description.replace(/\*\*(.*?)\*\*/g, '$1'),
+      severity: a.severity,
+      category: 'Spike',
+      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      read: false,
+      district: a.district || 'Multiple',
+      station: 'AI Anomaly Engine',
+      aiGenerated: true,
+      recommendation: a.recommendation,
+      confidence: a.confidence
+    }));
+
+    // Prepend AI alerts (most critical first)
+    alerts = [...aiAlerts, ...alerts];
+  }
+
+  renderAlerts(alerts);
+  updateAlertCounts();
+
+  // Filter items
+  document.querySelectorAll('.alert-filter-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.alert-filter-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      activeFilter = item.dataset.filter;
+      applyFilter();
+    });
+  });
+
+  // Listen to new simulated incidents to inject new alerts dynamically
+  window.addEventListener('ksp_db_update', (e) => {
+    if (!e.detail) return;
+    const newInc = e.detail;
+    
+    const newAlert = {
+      id: `ALT-${alerts.length + 100}`,
+      title: `Live Alert: ${newInc.crimeType} in ${newInc.district}`,
+      message: `Real-time incident reported at ${newInc.policeStation}. Category: ${newInc.crimeType}. AI anomaly engine is cross-referencing with district baseline.`,
+      severity: newInc.severity === 'critical' ? 'critical' : newInc.severity === 'high' ? 'high' : 'medium',
+      category: 'Spike',
+      time: newInc.time,
+      read: false,
+      district: newInc.district,
+      station: newInc.policeStation
+    };
+
+    alerts.unshift(newAlert);
+    applyFilter();
+  });
+
+  // Listen for AI bus anomaly events
+  if (window.KSPAIBus) {
+    KSPAIBus.on('anomaly:detected', (result) => {
+      result.anomalies.filter(a => a.severity === 'critical').forEach((a, i) => {
+        alerts.unshift({
+          id: `AI-LIVE-${Date.now()}-${i}`,
+          title: `AI Alert: ${a.type.replace(/_/g, ' ')}`,
+          message: a.description.replace(/\*\*(.*?)\*\*/g, '$1'),
+          severity: a.severity,
+          category: 'Spike',
+          time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+          read: false,
+          district: a.district || 'Multiple',
+          station: 'AI Anomaly Engine',
+          aiGenerated: true
+        });
+      });
+      applyFilter();
+    });
+  }
+
+  // Mark all read
+  document.getElementById('mark-all-read')?.addEventListener('click', () => {
+    alerts.forEach(a => a.read = true);
+    applyFilter();
+  });
+});
+</script>
+</body>
+</html>

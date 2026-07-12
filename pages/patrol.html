@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patrol Deployment Map — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <style>
+    .patrol-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 120px);
+    }
+    @media(max-width:1024px){ .patrol-layout{grid-template-columns:1fr} .side-recs{display:none} }
+    .side-recs {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      overflow-y: auto;
+    }
+    .full-map {
+      height: 100%;
+      min-height: 500px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .patrol-route-line {
+      stroke-dasharray: 6;
+      animation: dash 1s linear infinite;
+    }
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -12;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item active" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Patrol Deployment Map <span>/ Karnataka</span></div>
+    <div class="topnav-search">
+      <i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i>
+      <input type="text" id="global-search" placeholder="Search patrol unit, route…">
+    </div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="navigation" style="width:24px;height:24px;color:var(--accent-blue)"></i> Patrol Recommendation Engine</h1>
+        <p class="page-header-sub">AI-recommended movement patterns • Live asset tracking • Emergency redeployment</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="location.reload()">
+          <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
+          Recalculate Routes
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="showToast('Patrol deployment plan broadcasted to all units.', 'success')">
+          <i data-lucide="send" style="width:14px;height:14px"></i>
+          Deploy All Units
+        </button>
+      </div>
+    </div>
+
+    <div class="patrol-layout">
+      <!-- Left: Patrol Cards & AI Reasoning -->
+      <div class="side-recs" id="patrol-list-container">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- Right: Map -->
+      <div class="full-map">
+        <div class="map-stat-overlay" id="map-stats-overlay">
+          <div class="map-stat-pill"><span style="color:var(--success)">●</span> 3 Patrols Active</div>
+          <div class="map-stat-pill"><span style="color:var(--warning)">●</span> 2 Stationary</div>
+          <div class="map-stat-pill"><i data-lucide="shield" style="width:12px;height:12px;color:var(--accent-cyan)"></i> Secure Coverage</div>
+        </div>
+        <div id="patrol-map" style="width:100%;height:100%"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/anomaly/anomaly-detector.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../ai/decision/decision-support.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // Initialize Map
+  const map = L.map('patrol-map', {
+    center: [14.5, 76.5],
+    zoom: 7,
+    zoomControl: false,
+    attributionControl: false
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18
+  }).addTo(map);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+  const patrols = KSPData.patrols || [];
+  const mapLayers = [];
+
+  function getPriorityColor(prio) {
+    if (prio === 'critical') return '#EF4444';
+    if (prio === 'high') return '#F59E0B';
+    return '#3B82F6';
+  }
+
+  // Populate list & map
+  const container = document.getElementById('patrol-list-container');
+  if (container) {
+    container.innerHTML = patrols.map(p => `
+      <div class="patrol-card priority-${p.priority}" id="card-${p.id}" style="cursor:pointer">
+        <div class="flex justify-between items-start mb-sm">
+          <div class="patrol-unit-badge">${p.id} · ${p.name}</div>
+          <span class="badge ${p.priority === 'critical' ? 'badge-critical' : p.priority === 'high' ? 'badge-high' : 'badge-medium'}">${p.priority}</span>
+        </div>
+        <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary);margin-bottom:4px">
+          Officer: ${p.officer}
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px">
+          Current status: <span style="color:${p.status.includes('Active') ? 'var(--success)' : 'var(--text-muted)'}">${p.status}</span>
+        </div>
+        <div class="patrol-why-box">
+          <strong>AI Recommendation:</strong> Move unit from current position to higher risk sector.
+          <br><strong style="color:var(--accent-cyan)">Reason:</strong> ${p.reason}.
+        </div>
+        <div class="flex gap-sm mt-md">
+          <button class="btn btn-primary btn-sm btn-action-deploy" data-id="${p.id}" style="flex:1">Approve Route</button>
+          <button class="btn btn-secondary btn-sm btn-action-locate" data-id="${p.id}"><i data-lucide="eye" style="width:12px;height:12px"></i></button>
+        </div>
+      </div>
+    `).join('');
+    lucide.createIcons({ nodes: [container] });
+  }
+
+  // Render map elements
+  patrols.forEach(p => {
+    const color = getPriorityColor(p.priority);
+
+    // Current position marker (Blue dot)
+    const currentMarker = L.circleMarker([p.lat, p.lng], {
+      radius: 6,
+      color: '#3B82F6',
+      fillColor: '#3B82F6',
+      fillOpacity: 0.9
+    }).addTo(map);
+    currentMarker.bindPopup(`<b>${p.name}</b><br>Current Location<br>Officer: ${p.officer}`);
+
+    // Recommended position marker (Orange/Red dot)
+    const recMarker = L.circleMarker([p.recommendedLat, p.recommendedLng], {
+      radius: 8,
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.8
+    }).addTo(map);
+    recMarker.bindPopup(`<b>AI Target Sector</b><br>${p.reason}<br>Priority: ${p.priority.toUpperCase()}`);
+
+    // Dotted route line
+    const routeLine = L.polyline([
+      [p.lat, p.lng],
+      [p.recommendedLat, p.recommendedLng]
+    ], {
+      color: color,
+      weight: 2,
+      opacity: 0.8,
+      className: 'patrol-route-line'
+    }).addTo(map);
+
+    mapLayers.push({
+      id: p.id,
+      current: currentMarker,
+      target: recMarker,
+      line: routeLine,
+      data: p
+    });
+  });
+
+  // Action listeners
+  document.querySelectorAll('.btn-action-locate').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      locatePatrol(id);
+    });
+  });
+
+  document.querySelectorAll('.btn-action-deploy').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      showToast(`Route approved for ${id}. Dispatched command.`, 'success');
+      btn.textContent = 'Dispatched';
+      btn.disabled = true;
+      // Animate line turning solid green
+      const layer = mapLayers.find(l => l.id === id);
+      if (layer) {
+        layer.line.setStyle({ color: 'var(--success)', dashArray: 'none', className: '' });
+      }
+    });
+  });
+
+  document.querySelectorAll('.patrol-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.id.replace('card-', '');
+      locatePatrol(id);
+    });
+  });
+
+  function locatePatrol(id) {
+    const layer = mapLayers.find(l => l.id === id);
+    if (layer) {
+      map.flyTo([layer.data.lat, layer.data.lng], 10, { duration: 1.5 });
+      layer.target.openPopup();
+      // Highlight card
+      document.querySelectorAll('.patrol-card').forEach(c => c.style.borderColor = '');
+      document.getElementById(`card-${id}`).style.borderColor = 'var(--accent-cyan)';
+    }
+  }
+});
+</script>
+</body>
+</html>
