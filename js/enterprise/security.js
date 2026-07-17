@@ -78,8 +78,13 @@
         KSPAudit.log('Session Expired', 'User logged out automatically due to inactivity.', 'Success');
       }
 
-      alert('KSP Intelligence Console Session Expired due to inactivity. Access revoked.');
-      window.location.reload();
+      // Show non-blocking expiry message then reload
+      if (window.showToast) {
+        showToast('KSP Session Expired due to inactivity. Reloading...', 'warning', 3000);
+        setTimeout(() => window.location.reload(), 3200);
+      } else {
+        window.location.reload();
+      }
     },
 
     /**

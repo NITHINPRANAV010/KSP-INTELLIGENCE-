@@ -247,20 +247,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function zoomNetwork(factor) {
   const svg = d3.select('#network-svg');
-  if (!svg.empty()) {
-    svg.transition().duration(400).call(
-      d3.zoom().scaleBy, factor
-    );
+  if (!svg.empty() && window._kspZoomBehavior) {
+    svg.transition().duration(400).call(window._kspZoomBehavior.scaleBy, factor);
   }
 }
 
 function resetNetwork() {
   const svg = d3.select('#network-svg');
-  if (!svg.empty()) {
-    svg.transition().duration(600).call(
-      d3.zoom().transform,
-      d3.zoomIdentity
-    );
+  if (!svg.empty() && window._kspZoomBehavior) {
+    svg.transition().duration(600).call(window._kspZoomBehavior.transform, d3.zoomIdentity);
   }
 }
 </script>

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database.connection import get_db
-from app.models.models import User, CrimeRecord, Case, Evidence, AuditLog, District, Alert, Notification, Report, Suspect
+from app.models.models import User, CrimeRecord, Case, Evidence, AuditLog, District, Alert, Notification, Report, Suspect, Victim
 from app.schemas.schemas import UserLogin, UserOut, Token, CrimeRecordBase, CrimeRecordOut, CaseOut, EvidenceOut, DistrictOut, ChatQuery, ChatResponse, PredictRequest, PredictionOut, DashboardOverview, CommentCreate, EvidenceCreate
 from app.auth.auth import create_access_token, get_current_user, get_password_hash, verify_password, PermissionChecker
 from app.repositories.repositories import UserRepository, IncidentRepository, CaseRepository, EvidenceRepository, AuditRepository

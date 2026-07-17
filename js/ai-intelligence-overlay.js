@@ -89,52 +89,80 @@
   // Inject CSS
   const style = document.createElement('style');
   style.textContent = `
-    /* Anomaly notification toast */
+    /* ── Slim Top-Right AI Alert Ribbon ── */
     #anomaly-container {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
+      top: 56px;
+      right: 16px;
       z-index: 9998;
+      width: 320px;
+      pointer-events: none;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-width: 360px;
-      pointer-events: none;
+      gap: 0;
     }
     .anomaly-toast {
-      background: rgba(11,18,32,0.97);
-      border: 1px solid var(--border, rgba(255,255,255,0.08));
-      border-radius: 12px;
-      padding: 14px 16px;
-      backdrop-filter: blur(20px);
+      background: rgba(10,15,28,0.96);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 9px 12px;
+      backdrop-filter: blur(16px);
       display: flex;
-      gap: 12px;
-      align-items: flex-start;
-      animation: toastSlideIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+      align-items: center;
+      gap: 8px;
+      animation: anomalySlideDown 0.35s cubic-bezier(0.22,1,0.36,1) forwards;
       pointer-events: all;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.2s, border-color 0.2s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35);
     }
-    .anomaly-toast:hover { transform: translateX(-4px); border-color: rgba(59,130,246,0.4); }
+    .anomaly-toast:hover { background: rgba(18,26,46,0.98); border-color: rgba(59,130,246,0.35); }
     .anomaly-toast.critical { border-left: 3px solid #ef4444; }
-    .anomaly-toast.high { border-left: 3px solid #f59e0b; }
-    .anomaly-toast.medium { border-left: 3px solid #3b82f6; }
-    .anomaly-toast-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1rem; }
-    .anomaly-toast-body { flex: 1; min-width: 0; }
-    .anomaly-toast-title { font-size: 0.8125rem; font-weight: 700; color: #f1f5f9; margin-bottom: 3px; }
-    .anomaly-toast-detail { font-size: 0.7rem; color: rgba(255,255,255,0.5); line-height: 1.5; }
-    .anomaly-toast-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-    .anomaly-toast-time { font-size: 0.65rem; color: rgba(255,255,255,0.3); }
-    .anomaly-toast-conf { font-size: 0.65rem; font-weight: 700; }
-    .anomaly-dismiss { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.3); cursor: pointer; flex-shrink: 0; font-size: 0.75rem; }
-    .anomaly-dismiss:hover { color: rgba(255,255,255,0.7); }
-    @keyframes toastSlideIn {
-      from { opacity: 0; transform: translateX(100%); }
-      to { opacity: 1; transform: translateX(0); }
+    .anomaly-toast.high     { border-left: 3px solid #f59e0b; }
+    .anomaly-toast.medium   { border-left: 3px solid #3b82f6; }
+    .anomaly-toast-icon {
+      width: 24px; height: 24px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 0.8rem;
     }
-    @keyframes toastFadeOut {
-      from { opacity: 1; transform: translateX(0); max-height: 200px; margin-bottom: 8px; }
-      to { opacity: 0; transform: translateX(100%); max-height: 0; margin-bottom: 0; padding: 0; }
+    .anomaly-toast-body { flex: 1; min-width: 0; overflow: hidden; }
+    .anomaly-toast-title {
+      font-size: 0.72rem; font-weight: 700; color: #f1f5f9;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .anomaly-toast-meta {
+      display: flex; align-items: center; gap: 6px; margin-top: 2px;
+    }
+    .anomaly-toast-time  { font-size: 0.6rem; color: rgba(255,255,255,0.3); }
+    .anomaly-toast-conf  { font-size: 0.6rem; font-weight: 700; }
+    .anomaly-toast-action {
+      font-size: 0.6rem; margin-left: auto; white-space: nowrap;
+      text-decoration: none; font-weight: 600;
+    }
+    .anomaly-dismiss {
+      width: 18px; height: 18px; flex-shrink: 0; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.25); font-size: 0.65rem; cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .anomaly-dismiss:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.06); }
+    /* Progress bar auto-dismiss indicator */
+    .anomaly-progress {
+      position: absolute; bottom: 0; left: 0; height: 2px;
+      border-radius: 0 0 10px 10px;
+      animation: anomalyProgress linear forwards;
+    }
+    @keyframes anomalySlideDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes anomalyFadeOut {
+      from { opacity: 1; transform: translateY(0);  max-height: 60px; margin-bottom: 0; }
+      to   { opacity: 0; transform: translateY(-8px); max-height: 0;   margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+    }
+    @keyframes anomalyProgress {
+      from { width: 100%; }
+      to   { width: 0%; }
     }
 
     /* AI CoPilot FAB */
@@ -235,48 +263,53 @@
   document.body.appendChild(container);
 
   let shownAnomalies = [];
+  const DISMISS_MS = 6000; // auto-dismiss each notification after 6s
 
   function showAnomaly(anomaly) {
     if(shownAnomalies.includes(anomaly.id)) return;
     shownAnomalies.push(anomaly.id);
 
-    const colors = {critical:'#ef4444', high:'#f59e0b', medium:'#3b82f6'};
-    const icons = {spike:'📈', location:'📍', temporal:'⏱️', behavior:'👤', combination:'🔗'};
-    const color = colors[anomaly.severity] || '#3b82f6';
+    const colors = { critical:'#ef4444', high:'#f59e0b', medium:'#3b82f6' };
+    const icons  = { spike:'📈', location:'📍', temporal:'⏱️', behavior:'👤', combination:'🔗' };
+    const color  = colors[anomaly.severity] || '#3b82f6';
+    const severityLabel = anomaly.severity.charAt(0).toUpperCase() + anomaly.severity.slice(1);
 
     const toast = document.createElement('div');
     toast.className = `anomaly-toast ${anomaly.severity}`;
+    toast.style.position = 'relative'; // needed for the progress bar
     toast.innerHTML = `
-      <div class="anomaly-toast-icon" style="background:${color}20">${icons[anomaly.type]||'⚠️'}</div>
+      <div class="anomaly-toast-icon" style="background:${color}18">${icons[anomaly.type]||'⚠️'}</div>
       <div class="anomaly-toast-body">
-        <div class="anomaly-toast-title">🤖 Smart Anomaly: ${anomaly.title}</div>
-        <div class="anomaly-toast-detail">${anomaly.detail.substring(0,100)}...</div>
+        <div class="anomaly-toast-title">${anomaly.title}</div>
         <div class="anomaly-toast-meta">
           <span class="anomaly-toast-time">${anomaly.time}</span>
-          <span class="anomaly-toast-conf" style="color:${color}">AI ${anomaly.confidence}%</span>
-          <span style="font-size:0.65rem;color:${color};cursor:pointer;margin-left:auto" onclick="window.location.href='${anomaly.link}'">→ ${anomaly.action}</span>
+          <span class="anomaly-toast-conf" style="color:${color}">${severityLabel} · ${anomaly.confidence}%</span>
+          <a class="anomaly-toast-action" style="color:${color}" href="${anomaly.link}">→ View</a>
         </div>
       </div>
-      <div class="anomaly-dismiss" onclick="dismissAnomaly(this.closest('.anomaly-toast'))">✕</div>
+      <div class="anomaly-dismiss" onclick="event.stopPropagation();dismissAnomaly(this.closest('.anomaly-toast'))">✕</div>
+      <div class="anomaly-progress" style="background:${color};animation-duration:${DISMISS_MS}ms"></div>
     `;
     toast.addEventListener('click', (e) => {
-      if(!e.target.classList.contains('anomaly-dismiss')) {
+      if(!e.target.classList.contains('anomaly-dismiss') && !e.target.classList.contains('anomaly-toast-action')) {
         window.location.href = anomaly.link;
       }
     });
     container.appendChild(toast);
 
-    // Auto-dismiss after 8 seconds
-    setTimeout(() => dismissAnomaly(toast), 8000);
+    // Auto-dismiss
+    const timer = setTimeout(() => dismissAnomaly(toast), DISMISS_MS);
+    toast._timer = timer;
   }
 
   window.dismissAnomaly = function(toast) {
     if(!toast) return;
-    toast.style.animation = 'toastFadeOut 0.3s ease forwards';
+    clearTimeout(toast._timer);
+    toast.style.animation = 'anomalyFadeOut 0.3s ease forwards';
     setTimeout(() => { if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
   };
 
-  // Show anomalies progressively
+  // Show anomalies one at a time with longer spacing so page feels clean on load
   let anomalyIdx = 0;
   function showNextAnomaly() {
     if(anomalyIdx < ANOMALIES.length) {
@@ -284,11 +317,11 @@
     }
   }
 
-  // Start showing after 3s, then every 12s
-  setTimeout(showNextAnomaly, 3000);
-  setTimeout(showNextAnomaly, 9000);
-  setTimeout(showNextAnomaly, 22000);
-  setTimeout(showNextAnomaly, 38000);
+  // First alert after 8s (page has settled), then every 20s — never stacked
+  setTimeout(showNextAnomaly, 8000);
+  setTimeout(showNextAnomaly, 28000);
+  setTimeout(showNextAnomaly, 52000);
+  setTimeout(showNextAnomaly, 80000);
 
   // ──────────────────────────────────────────────
   // AI COPILOT FAB

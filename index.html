@@ -926,11 +926,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const cards = document.querySelectorAll('.kpi-card');
       if (cards.length >= 6) {
-        KSPCounters.animateCounter(cards[0].querySelector('.kpi-value'), todayCount || 47, 800);
+        KSPCounters.animateCounter(cards[0].querySelector('.kpi-value'), todayCount, 800);
         KSPCounters.animateCounter(cards[1].querySelector('.kpi-value'), activeCount || metrics.active, 800);
         KSPCounters.animateCounter(cards[2].querySelector('.kpi-value'), highRiskCount, 800);
-        KSPCounters.animateCounter(cards[3].querySelector('.kpi-value'), roSet.size || 312, 800);
-        KSPCounters.animateCounter(cards[5].querySelector('.kpi-value'), 23, 800); // alerts baseline
+        KSPCounters.animateCounter(cards[3].querySelector('.kpi-value'), roSet.size || metrics.repeatOffendersCount, 800);
+        // AI Alerts: count active anomalies from the anomaly engine if available, else derive from incident severity
+        const aiAlertCount = (window.KSPAnomalyDetector && KSPAnomalyDetector.getActiveAlerts)
+          ? KSPAnomalyDetector.getActiveAlerts().length
+          : filteredIncidents.filter(i => i.severity === 'critical').length;
+        KSPCounters.animateCounter(cards[5].querySelector('.kpi-value'), aiAlertCount, 800);
       }
 
       // 2. Update Risk Districts mini sidebar list

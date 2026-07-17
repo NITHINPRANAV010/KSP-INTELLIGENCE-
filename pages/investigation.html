@@ -410,7 +410,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── Populate Left Panel from Real DB ─────────────────────
+  // ── Active Investigation Context Tracker ────────────────
+  // This object is updated every time the officer clicks a case.
+  // The report reads from it to know exactly what is being investigated.
+  window._activeInvestigation = {
+    district:   'Bengaluru Urban', // default — overridden on case click
+    crimeType:  null,
+    caseNumber: null,
+    suspect:    null,
+    station:    null,
+    severity:   null,
+    updatedAt:  null
+  };
+
+  function setActiveCase(inc) {
+    if (!inc) return;
+    window._activeInvestigation = {
+      district:   inc.district   || 'Bengaluru Urban',
+      crimeType:  inc.crimeType  || null,
+      caseNumber: inc.caseNumber || inc.id || null,
+      suspect:    inc.suspect    ? (inc.suspect.name || null) : null,
+      station:    inc.policeStation || null,
+      severity:   inc.severity   || null,
+      updatedAt:  new Date()
+    };
+    // Flash the report button to hint the report is now context-specific
+    if (btnReport) {
+      btnReport.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.4)';
+      setTimeout(() => { btnReport.style.boxShadow = ''; }, 1200);
+    }
+    if (window.showToast) showToast(`🔍 Investigating: ${inc.caseNumber || inc.id} · ${inc.crimeType}`, 'info', 3000);
+  }
+
+  // Read URL ?q= param to preload context on direct navigation
+  (function readUrlContext() {
+    const q = new URLSearchParams(window.location.search).get('q') || '';
+    if (!q || !window.KSPDatabase) return;
+    const match = KSPDatabase.incidents.find(i =>
+      i.id === q || i.caseNumber === q ||
+      q.toLowerCase().includes(i.id.toLowerCase()) ||
+      q.toLowerCase().includes((i.caseNumber || '').toLowerCase())
+    );
+    if (match) setActiveCase(match);
+  })();
+
   function populateLeftPanels() {
     const incidents = window.KSPDatabase ? KSPDatabase.incidents.slice(0, 50) : [];
     const blrCases = incidents.filter(i => i.district === 'Bengaluru Urban').slice(0, 6);
@@ -422,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
       evidenceEl.innerHTML = blrCases.map((c, i) => `
         <div class="drag-item" draggable="true" id="drag-ev-${i}"
              title="Click to investigate"
-             onclick="window.location.href='investigation.html?q='+encodeURIComponent(c.id+' '+c.crimeType)">
+             onclick="setActiveCase(window.KSPDatabase && KSPDatabase.incidents.find(x=>x.id==='${c.id}')); window.location.href='investigation.html?q='+encodeURIComponent('${c.id} ${c.crimeType}')">
           ${evidenceIcons[c.crimeType]||'📂'} ${c.crimeType} · ${c.policeStation}
           <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.id} · ${c.date}</div>
         </div>`).join('');
@@ -455,7 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const recentCases = incidents.slice(0, 8);
     if (caseFileEl && recentCases.length) {
       caseFileEl.innerHTML = recentCases.map(c => `
-        <div class="drag-item" style="cursor:pointer" onclick="window.location.href='investigation.html?q='+encodeURIComponent(c.caseNumber)">
+        <div class="drag-item" style="cursor:pointer"
+             onclick="setActiveCase(window.KSPDatabase && KSPDatabase.incidents.find(x=>x.caseNumber==='${c.caseNumber}')); window.location.href='investigation.html?q='+encodeURIComponent(c.caseNumber)">
           📂 ${c.caseNumber} · ${c.crimeType}
           <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.district} · ${c.status}</div>
         </div>`).join('');
@@ -476,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (incidents.length) {
       board.innerHTML = incidents.map((c, i) => `
         <div class="pin-note ${colors[i]}" style="top:${positions[i].top};left:${positions[i].left};cursor:pointer"
-             onclick="document.getElementById('tab-center-chat').click();setTimeout(()=>{const inp=document.getElementById('chat-input');inp.value='Investigate case ${c.caseNumber}';inp.dispatchEvent(new Event('input'));},300)">
+             onclick="setActiveCase(window.KSPDatabase && KSPDatabase.incidents.find(x=>x.caseNumber==='${c.caseNumber}')); document.getElementById('tab-center-chat').click();setTimeout(()=>{const inp=document.getElementById('chat-input');inp.value='Investigate case ${c.caseNumber}';inp.dispatchEvent(new Event('input'));},300)">
           <div class="pin-note-header" style="font-size:0.6rem;font-weight:700;margin-bottom:3px">${labels[i]}</div>
           <div style="font-size:0.72rem;font-weight:600">${c.caseNumber}</div>
           <div style="font-size:0.65rem;opacity:0.85;margin-top:2px">${c.crimeType}</div>
@@ -656,70 +700,141 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateStr = now.toLocaleDateString('en-IN', { day:'numeric', month:'long', year:'numeric' });
     const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
 
-    // Pull live data
-    let recsHTML = '';
-    let findingsHTML = '';
-    let totalCases = 10250;
-    let solveRate = 67;
+    // ── Read active investigation context ──────────────────
+    const ctx = window._activeInvestigation || {};
+    const district   = ctx.district   || 'All Districts';
+    const crimeType  = ctx.crimeType  || null;
+    const caseNumber = ctx.caseNumber || null;
+    const station    = ctx.station    || null;
+    const suspect    = ctx.suspect    || null;
+    const updatedAt  = ctx.updatedAt  ? ctx.updatedAt.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : null;
 
+    // ── Build filter from current context ──────────────────
+    const filter = {};
+    if (district && district !== 'All Districts') filter.district = district;
+    if (crimeType) filter.crimeType = crimeType;
+
+    // ── Pull live metrics through filter engine ─────────────
+    let totalCases = 0, solveRate = 0, activeCases = 0, repeatOffCount = 0;
     if (window.KSPFilterEngine) {
-      const metrics = KSPFilterEngine.getMetrics({ district: 'Bengaluru Urban' });
-      totalCases = metrics.total;
-      solveRate  = metrics.solveRate;
-    }
-    if (window.KSPRiskEngine) {
-      const risk = KSPRiskEngine.calculateDistrictRisk('Bengaluru Urban');
-      findingsHTML = risk.factors.slice(0,4).map(f => `<li>${f}</li>`).join('');
-      recsHTML = risk.recommendations.slice(0,3).map(r => `<li>${r}</li>`).join('');
-    } else {
-      findingsHTML = `<li>Repeat offender activity detected in Shivajinagar zone.</li><li>CCTV timestamps align with suspect sighting reports.</li><li>Vehicle registry KA-01-MF-4892 linked to 3 cases.</li>`;
-      recsHTML = `<li>Issue BOLO on KA-01-MF-4892 to all border checkposts.</li><li>Deploy 4 plainclothes units to Majestic bus terminal.</li>`;
+      const metrics = KSPFilterEngine.getMetrics(filter);
+      totalCases    = metrics.total      || 0;
+      solveRate     = metrics.solveRate  || 0;
+      activeCases   = metrics.active     || 0;
+      // Count repeat offenders in this context
+      const incidents = KSPFilterEngine.query(filter);
+      const roSet = new Set();
+      incidents.forEach(inc => {
+        if (inc.suspect && inc.suspect.repeatOffender && inc.suspect.id) roSet.add(inc.suspect.id);
+      });
+      repeatOffCount = roSet.size;
     }
 
+    // ── Pull AI findings specific to this district ──────────
+    let findingsHTML = '', recsHTML = '', riskScore = 0, riskLevel = 'medium';
+    if (window.KSPRiskEngine) {
+      const riskDistrict = (district && district !== 'All Districts') ? district : 'Bengaluru Urban';
+      const risk = KSPRiskEngine.calculateDistrictRisk(riskDistrict);
+      riskScore  = risk.score;
+      riskLevel  = risk.level;
+      findingsHTML = risk.factors.slice(0, 5).map(f => `<li>${f}</li>`).join('');
+      recsHTML     = risk.recommendations.slice(0, 4).map(r => `<li>${r}</li>`).join('');
+    } else {
+      findingsHTML = `<li>Repeat offender activity detected in ${district}.</li><li>Pattern clustering suggests coordinated criminal group.</li>`;
+      recsHTML     = `<li>Increase patrol frequency in identified hotspot zones.</li><li>Cross-reference suspect network with district records.</li>`;
+    }
+
+    // ── Resolution probability ──────────────────────────────
     let prob = 84;
     if (window.KSPOffenderProfiler) {
       const profiles = KSPOffenderProfiler.profileAll();
       if (profiles.length) prob = Math.min(97, Math.round(60 + profiles[0].riskScore * 0.37));
     }
 
+    // ── Risk level color ────────────────────────────────────
+    const riskColor = riskLevel === 'critical' ? '#ef4444' : riskLevel === 'high' ? '#f59e0b' : riskLevel === 'medium' ? '#3b82f6' : '#22c55e';
+
+    // ── Context badge line ──────────────────────────────────
+    const contextBadges = [
+      caseNumber ? `<span style="background:rgba(59,130,246,0.12);color:#60a5fa;padding:2px 8px;border-radius:99px;font-size:0.65rem;font-weight:700">📂 ${caseNumber}</span>` : '',
+      crimeType  ? `<span style="background:rgba(245,158,11,0.12);color:#fbbf24;padding:2px 8px;border-radius:99px;font-size:0.65rem;font-weight:700">⚠️ ${crimeType}</span>` : '',
+      station    ? `<span style="background:rgba(139,92,246,0.12);color:#a78bfa;padding:2px 8px;border-radius:99px;font-size:0.65rem;font-weight:700">🏢 ${station}</span>` : '',
+      suspect    ? `<span style="background:rgba(239,68,68,0.12);color:#f87171;padding:2px 8px;border-radius:99px;font-size:0.65rem;font-weight:700">👤 ${suspect}</span>` : '',
+    ].filter(Boolean).join(' ');
+
     reportBody.innerHTML = `
       <div style="font-family:var(--font-base)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <!-- Header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">
           <div>
-            <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary)">KSP AI Investigation Case Report</div>
+            <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary)">KSP AI Investigation Report</div>
             <div style="font-size:0.75rem;color:var(--text-muted)">Generated: ${dateStr} at ${timeStr} · Classification: CONFIDENTIAL</div>
+            ${updatedAt ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px">Case loaded at ${updatedAt}</div>` : ''}
           </div>
           <div style="font-size:0.7rem;color:var(--text-muted);text-align:right">
             Report ID: RPT-${Math.random().toString(36).slice(2,8).toUpperCase()}<br>
-            Bengaluru Urban Command
+            <span style="color:var(--accent-blue);font-weight:700">${district}</span>
           </div>
         </div>
+
+        <!-- Context badges -->
+        ${contextBadges ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${contextBadges}</div>` : ''}
+
         <div style="height:2px;background:linear-gradient(90deg,var(--accent-blue),var(--accent-cyan));border-radius:2px;margin-bottom:16px"></div>
 
-        <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:0 0 8px">📊 Intelligence Summary</h3>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+        <!-- KPI grid -->
+        <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:0 0 8px">📊 Intelligence Summary — ${district}${crimeType ? ' · ' + crimeType : ''}</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:16px">
           <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:1.5rem;font-weight:800;color:var(--accent-blue)">${totalCases.toLocaleString('en-IN')}</div>
-            <div style="font-size:0.65rem;color:var(--text-muted)">Cases Analyzed</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--accent-blue)">${totalCases.toLocaleString('en-IN')}</div>
+            <div style="font-size:0.62rem;color:var(--text-muted)">Cases Analyzed</div>
+          </div>
+          <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:#ef4444">${activeCases.toLocaleString('en-IN')}</div>
+            <div style="font-size:0.62rem;color:var(--text-muted)">Active Cases</div>
           </div>
           <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:1.5rem;font-weight:800;color:var(--success)">${prob}%</div>
-            <div style="font-size:0.65rem;color:var(--text-muted)">Resolution Probability</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--success)">${prob}%</div>
+            <div style="font-size:0.62rem;color:var(--text-muted)">Resolution Prob.</div>
           </div>
-          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:10px;text-align:center">
-            <div style="font-size:1.5rem;font-weight:800;color:var(--warning)">${solveRate}%</div>
-            <div style="font-size:0.65rem;color:var(--text-muted)">Solve Rate</div>
+          <div style="background:rgba(${riskLevel==='critical'?'239,68,68':riskLevel==='high'?'245,158,11':'59,130,246'},0.08);border:1px solid rgba(${riskLevel==='critical'?'239,68,68':riskLevel==='high'?'245,158,11':'59,130,246'},0.2);border-radius:8px;padding:10px;text-align:center">
+            <div style="font-size:1.4rem;font-weight:800;color:${riskColor}">${riskScore}/100</div>
+            <div style="font-size:0.62rem;color:var(--text-muted)">District Risk Score</div>
           </div>
         </div>
 
+        <!-- Repeat offenders -->
+        ${repeatOffCount > 0 ? `
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:10px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:1.5rem;font-weight:800;color:#ef4444">${repeatOffCount}</div>
+          <div>
+            <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary)">Repeat Offenders Identified</div>
+            <div style="font-size:0.68rem;color:var(--text-muted)">Active in ${district}${crimeType ? ' · ' + crimeType : ''} cases</div>
+          </div>
+        </div>` : ''}
+
+        <!-- Findings -->
         <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:12px 0 6px">🧠 AI Detective Key Findings</h3>
         <ul style="font-size:0.8rem;margin-left:16px;line-height:1.8;color:var(--text-secondary)">${findingsHTML}</ul>
 
+        <!-- Recommendations -->
         <h3 style="font-size:0.875rem;font-weight:700;color:var(--text-primary);margin:12px 0 6px">🛡️ Recommended Actions</h3>
         <ul style="font-size:0.8rem;margin-left:16px;line-height:1.8;color:var(--text-secondary)">${recsHTML}</ul>
 
-        <div style="margin-top:16px;padding:10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;font-size:0.7rem;color:var(--text-muted)">
-          ⚠️ This report is AI-generated based on KSP Crime Intelligence Database (${totalCases.toLocaleString('en-IN')} records). For operational use only.
+        <!-- Solve rate bar -->
+        <div style="margin-top:14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:10px">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;font-weight:600;margin-bottom:6px">
+            <span style="color:var(--text-secondary)">Case Solve Rate</span>
+            <span style="color:var(--success)">${solveRate}%</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+            <div style="width:${solveRate}%;height:100%;background:var(--success);border-radius:99px;transition:width 1s"></div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="margin-top:14px;padding:10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;font-size:0.68rem;color:var(--text-muted)">
+          ⚠️ This report is AI-generated based on KSP Crime Intelligence Database (${totalCases.toLocaleString('en-IN')} records analyzed for ${district}). For operational use only.
         </div>
       </div>`;
   }

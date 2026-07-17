@@ -92,12 +92,15 @@
     // Zoomable group
     const g = svg.append('g').attr('class', 'network-g');
 
-    svg.call(d3.zoom()
+    const zoomBehavior = d3.zoom()
       .scaleExtent([0.3, 3])
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
-      })
-    );
+      });
+
+    svg.call(zoomBehavior);
+    // Expose zoom behaviour globally so zoom/reset buttons can use it
+    window._kspZoomBehavior = zoomBehavior;
 
     // ── Simulation ─────────────────────────────────────
     simulation = d3.forceSimulation(nodes)

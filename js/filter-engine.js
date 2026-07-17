@@ -47,7 +47,7 @@
         // 6. Repeat Offender Status
         if (active.repeatOffender !== 'all') {
           const isRO = active.repeatOffender === 'true' || active.repeatOffender === true;
-          if (inc.suspect.repeatOffender !== isRO) return false;
+          if (!inc.suspect || inc.suspect.repeatOffender !== isRO) return false;
         }
 
         // 7. Timeframe / Date filters
@@ -56,16 +56,17 @@
 
         if (active.timeframe !== 'all') {
           const incDate = new Date(inc.date);
-          const limitDate = new Date(2025, 6, 3); // current time July 3, 2025
-          
+          const now = new Date();
+          const todayStr = now.toISOString().slice(0, 10); // e.g. '2026-07-17'
+
           if (active.timeframe === 'today') {
-            if (inc.date !== '2025-07-03') return false;
+            if (inc.date !== todayStr) return false;
           } else if (active.timeframe === 'week') {
-            const diffTime = Math.abs(limitDate - incDate);
+            const diffTime = Math.abs(now - incDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             if (diffDays > 7) return false;
           } else if (active.timeframe === 'month') {
-            if (incDate.getMonth() !== 6 || incDate.getFullYear() !== 2025) return false; // Not July 2025
+            if (incDate.getMonth() !== now.getMonth() || incDate.getFullYear() !== now.getFullYear()) return false;
           }
         }
 
@@ -156,10 +157,11 @@
         vehicle: Array(12).fill(0)
       };
 
+      const currentYear = new Date().getFullYear();
       list.forEach(inc => {
         const d = new Date(inc.date);
-        // Only aggregate 2024 to map monthly patterns correctly
-        if (d.getFullYear() === 2024) {
+        // Aggregate last 2 years of data for monthly patterns
+        if (d.getFullYear() >= currentYear - 1) {
           const mIdx = d.getMonth();
           monthlyData.total[mIdx]++;
           if (inc.status === 'Resolved' || inc.status === 'Arrested') {

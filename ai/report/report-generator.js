@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const TODAY = new Date('2025-07-04');
+  const TODAY = new Date();
   const DATE_STR = TODAY.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   /**
