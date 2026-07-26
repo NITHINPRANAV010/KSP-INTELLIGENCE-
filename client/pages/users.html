@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    .user-avatar-lg {
+      width:40px;height:40px;border-radius:var(--radius-md);
+      background:linear-gradient(135deg,var(--accent-blue),var(--accent-cyan));
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.875rem;font-weight:700;color:white;flex-shrink:0;
+    }
+    .role-badge-dcp { background:rgba(239,68,68,0.12);color:#FF6B6B;border:1px solid rgba(239,68,68,0.2);border-radius:99px;padding:3px 9px;font-size:0.6875rem;font-weight:700 }
+    .role-badge-sp  { background:rgba(245,158,11,0.12);color:#FBB347;border:1px solid rgba(245,158,11,0.2);border-radius:99px;padding:3px 9px;font-size:0.6875rem;font-weight:700 }
+    .role-badge-ci  { background:rgba(59,130,246,0.12);color:#60A5FA;border:1px solid rgba(59,130,246,0.2);border-radius:99px;padding:3px 9px;font-size:0.6875rem;font-weight:700 }
+    .role-badge-si  { background:rgba(34,211,238,0.12);color:#22D3EE;border:1px solid rgba(34,211,238,0.2);border-radius:99px;padding:3px 9px;font-size:0.6875rem;font-weight:700 }
+    .role-badge-hc  { background:rgba(34,197,94,0.12);color:#4ADE80;border:1px solid rgba(34,197,94,0.2);border-radius:99px;padding:3px 9px;font-size:0.6875rem;font-weight:700 }
+    .on-duty { color:var(--success) }
+    .off-duty { color:var(--text-muted) }
+    .on-leave { color:var(--warning) }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item active" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">User Management <span>/ Officers</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="global-search" placeholder="Search officers…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="users" style="width:24px;height:24px;color:var(--accent-blue)"></i> User Management</h1>
+        <p class="page-header-sub">Officer registry · Role management · Access control · Shift tracking</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary"><i data-lucide="user-plus" style="width:14px;height:14px"></i> Add Officer</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex gap-md stagger-item" style="margin-bottom:var(--space-lg);flex-wrap:wrap">
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:140px">
+        <div class="kpi-icon-wrap kpi-icon-blue"><i data-lucide="users" style="width:18px;height:18px"></i></div>
+        <div><div class="text-2xl font-black text-primary">2,847</div><div class="text-xs text-muted">Total Officers</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:140px">
+        <div class="kpi-icon-wrap kpi-icon-green"><i data-lucide="shield-check" style="width:18px;height:18px"></i></div>
+        <div><div class="text-2xl font-black text-primary">1,934</div><div class="text-xs text-success">On Duty</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:140px">
+        <div class="kpi-icon-wrap" style="background:rgba(255,255,255,0.05);color:var(--text-muted)"><i data-lucide="moon" style="width:18px;height:18px"></i></div>
+        <div><div class="text-2xl font-black text-primary">613</div><div class="text-xs text-muted">Off Duty</div></div>
+      </div>
+      <div class="card card-sm flex items-center gap-md" style="flex:1;min-width:140px">
+        <div class="kpi-icon-wrap kpi-icon-warn"><i data-lucide="umbrella" style="width:18px;height:18px"></i></div>
+        <div><div class="text-2xl font-black text-primary">300</div><div class="text-xs text-muted">On Leave</div></div>
+      </div>
+    </div>
+
+    <!-- Officer Table -->
+    <div class="card stagger-item delay-100" style="margin-bottom:var(--space-lg)">
+      <div class="card-header">
+        <div class="card-title"><i data-lucide="table" style="width:15px;height:15px;color:var(--accent-blue)"></i> Officer Directory</div>
+        <div class="flex gap-sm">
+          <select class="form-control" style="width:auto;font-size:0.8rem">
+            <option>All Districts</option>
+            <option>Bengaluru Urban</option>
+            <option>Mysuru</option>
+          </select>
+          <select class="form-control" style="width:auto;font-size:0.8rem">
+            <option>All Ranks</option>
+            <option>DCP</option>
+            <option>SP</option>
+            <option>CI</option>
+            <option>SI</option>
+          </select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr><th>Officer</th><th>Badge #</th><th>Rank</th><th>District</th><th>Status</th><th>Access Level</th><th>Actions</th></tr></thead>
+          <tbody id="officers-tbody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Access Roles -->
+    <div class="card stagger-item delay-200">
+      <div class="card-header">
+        <div class="card-title"><i data-lucide="shield" style="width:15px;height:15px;color:var(--accent-cyan)"></i> Role Permissions Matrix</div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>DCP / SP</th>
+              <th>CI</th>
+              <th>SI</th>
+              <th>HC / PC</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="bold">Dashboard</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ View</span></td></tr>
+            <tr><td class="bold">AI Investigation</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--text-muted)">✗ None</span></td></tr>
+            <tr><td class="bold">Crime Heatmap</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ View</span></td><td><span style="color:var(--success)">✓ View</span></td></tr>
+            <tr><td class="bold">Criminal Network</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--warning)">~ District only</span></td><td><span style="color:var(--text-muted)">✗ None</span></td></tr>
+            <tr><td class="bold">Predictive Intel</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--success)">✓ View</span></td><td><span style="color:var(--text-muted)">✗ None</span></td></tr>
+            <tr><td class="bold">Reports</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--warning)">~ Generate</span></td><td><span style="color:var(--success)">✓ View</span></td><td><span style="color:var(--text-muted)">✗ None</span></td></tr>
+            <tr><td class="bold">User Management</td><td><span style="color:var(--success)">✓ Full</span></td><td><span style="color:var(--text-muted)">✗ None</span></td><td><span style="color:var(--text-muted)">✗ None</span></td><td><span style="color:var(--text-muted)">✗ None</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/counters.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+const ROLE_BADGE = { DCP:'role-badge-dcp', SP:'role-badge-sp', CI:'role-badge-ci', SI:'role-badge-si', HC:'role-badge-hc' };
+const STATUS_CLASS = { 'On Duty':'on-duty', 'Off Duty':'off-duty', 'On Leave':'on-leave' };
+const STATUS_DOT = { 'On Duty':{ color:'var(--success)', anim:'animation:pulseDot 1.5s ease infinite' }, 'Off Duty':{ color:'var(--text-muted)', anim:'' }, 'On Leave':{ color:'var(--warning)', anim:'' } };
+
+const ALL_OFFICERS = [
+  ...KSPData.officers,
+  { badge:'5234', name:'SI Vikram Setty', rank:'SI', district:'Kalaburagi', status:'On Duty' },
+  { badge:'6712', name:'HC Pradeep N.', rank:'HC', district:'Belagavi', status:'On Leave' },
+  { badge:'7891', name:'CI Anand Kumar', rank:'CI', district:'Bengaluru Urban', status:'On Duty' },
+  { badge:'8045', name:'SP Ranjitha D.', rank:'SP', district:'Mysuru', status:'On Duty' },
+];
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  const tbody = document.getElementById('officers-tbody');
+  if (tbody) {
+    tbody.innerHTML = ALL_OFFICERS.map(o => {
+      const initials = o.name.split(' ').map(n=>n[0]).slice(0,2).join('');
+      const sd = STATUS_DOT[o.status] || STATUS_DOT['Off Duty'];
+      return `<tr>
+        <td>
+          <div class="flex items-center gap-md">
+            <div class="user-avatar-lg">${initials}</div>
+            <span class="bold">${o.name}</span>
+          </div>
+        </td>
+        <td class="font-mono text-muted">#${o.badge}</td>
+        <td><span class="${ROLE_BADGE[o.rank] || 'badge badge-neutral'}">${o.rank}</span></td>
+        <td>${o.district}</td>
+        <td>
+          <div class="flex items-center gap-xs">
+            <div style="width:7px;height:7px;border-radius:50%;background:${sd.color};${sd.anim}"></div>
+            <span class="${STATUS_CLASS[o.status] || ''}">${o.status}</span>
+          </div>
+        </td>
+        <td><span class="badge ${o.rank==='DCP'||o.rank==='SP'?'badge-critical':o.rank==='CI'?'badge-high':o.rank==='SI'?'badge-medium':'badge-low'}">${o.rank==='DCP'||o.rank==='SP'?'Admin':o.rank==='CI'?'Senior':'Standard'}</span></td>
+        <td>
+          <div class="flex gap-xs">
+            <button class="btn btn-ghost btn-icon" data-tooltip="Edit"><i data-lucide="edit" style="width:13px;height:13px"></i></button>
+            <button class="btn btn-ghost btn-icon" data-tooltip="View Profile"><i data-lucide="eye" style="width:13px;height:13px"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+    lucide.createIcons({ nodes: [tbody] });
+  }
+});
+</script>
+</body>
+</html>

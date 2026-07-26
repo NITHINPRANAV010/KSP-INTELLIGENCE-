@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Serial Crime Detection â€” KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <style>
+    .serial-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 140px);
+    }
+    @media(max-width:1440px){ .serial-layout{grid-template-columns:280px 1fr} .serial-right{display:none} }
+    @media(max-width:1024px){ .serial-layout{grid-template-columns:1fr} .serial-left{display:none} }
+    
+    .serial-panel {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); display: flex; flex-direction: column; overflow: hidden;
+    }
+    .panel-hd {
+      padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border);
+      flex-shrink: 0; background: rgba(255,255,255,0.01);
+    }
+    .panel-bd { flex:1; overflow-y:auto; padding: var(--space-md); }
+
+    .cluster-card {
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      padding: var(--space-md); margin-bottom: var(--space-sm);
+      cursor: pointer; transition: all 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .cluster-card::before {
+      content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+    }
+    .cluster-card.critical::before { background:var(--critical); }
+    .cluster-card.high::before { background:var(--warning); }
+    .cluster-card.medium::before { background:var(--accent-blue); }
+    .cluster-card:hover { background:rgba(255,255,255,0.03); transform:translateX(2px); }
+    .cluster-card.selected { background:rgba(59,130,246,0.06); border-color:rgba(59,130,246,0.3); }
+
+    .confidence-ring {
+      width: 56px; height: 56px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .confidence-ring::before {
+      content:''; position:absolute; inset:3px; border-radius:50%;
+      background:var(--card-bg);
+    }
+    .confidence-ring span { position:relative; z-index:1; }
+
+    .incident-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; flex-shrink: 0;
+    }
+
+    .modus-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 99px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .incident-timeline-item {
+      display: flex; gap: var(--space-md); padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      position: relative;
+    }
+    .incident-timeline-item:last-child { border-bottom: none; }
+    .itl-connector {
+      position: absolute; left: 15px; top: 28px; bottom: -10px; width: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+    .itl-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
+      border: 2px solid var(--card-bg);
+    }
+
+    .similarity-row {
+      display: flex; align-items: center; gap: var(--space-sm);
+      padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .similarity-row:last-child { border-bottom: none; }
+    .sim-bar {
+      flex: 1; height: 6px; border-radius: 99px;
+      background: var(--bg-tertiary); overflow: hidden;
+    }
+    .sim-fill { height: 100%; border-radius: 99px; }
+
+    .alert-pulse {
+      animation: alertPulse 2s ease infinite;
+    }
+    @keyframes alertPulse {
+      0%,100%{ box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+      50%{ box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <a class="nav-item active" href="serial-crimes.html"><span class="nav-icon"><i data-lucide="link-2"></i></span><span class="nav-label">Serial Crimes</span></a>
+      <a class="nav-item" href="digital-footprint.html"><span class="nav-icon"><i data-lucide="fingerprint"></i></span><span class="nav-label">Digital Footprint</span></a>
+      <div class="nav-section-label">Command</div>
+      <a class="nav-item" href="commander.html"><span class="nav-icon"><i data-lucide="shield-alert"></i></span><span class="nav-label">Commander Briefing</span></a>
+      <a class="nav-item" href="resource-ai.html"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Resource AI</span></a>
+      <a class="nav-item" href="case-priority.html"><span class="nav-icon"><i data-lucide="list-ordered"></i></span><span class="nav-label">Case Priority AI</span></a>
+      <a class="nav-item" href="cascade.html"><span class="nav-icon"><i data-lucide="activity"></i></span><span class="nav-label">Crime Cascade</span></a>
+      <a class="nav-item" href="event-monitor.html"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Event Monitor</span></a>
+      <a class="nav-item" href="scenario.html"><span class="nav-icon"><i data-lucide="flask-conical"></i></span><span class="nav-label">AI Scenario Sim</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" style="width:16px;height:16px"></i><span style="font-size:0.75rem">Collapse</span></button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Serial Crime Detection <span>/ AI Pattern Matching Engine</span></div>
+    <div class="topnav-actions">
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--success)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulseDot 1.5s ease infinite"></div>LIVE
+      </div>
+      <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP Â· Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content">
+    <!-- Demo bar -->
+    <div style="background:linear-gradient(90deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.25);border-radius:var(--radius-md);padding:10px 16px;display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md);flex-wrap:wrap">
+      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;white-space:nowrap;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
+      <a href="../index.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">1 Dashboard</a>
+      <a href="heatmap.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">2 ðŸ—ºï¸ Heatmap</a>
+      <a href="serial-crimes.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.4);color:var(--text-primary);text-decoration:none">3 ðŸ”— Serial Crimes</a>
+      <a href="commander.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">4 ðŸŽ–ï¸ Commander</a>
+      <a href="cascade.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">5 ðŸŒŠ Cascade</a>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="link-2" style="width:24px;height:24px;color:var(--critical)"></i> Serial Crime Detection</h1>
+        <p class="page-header-sub">AI-Powered Pattern Matching Across Location, Time, MO, Victim Profile, Weapon & Evidence</p>
+      </div>
+      <div class="page-header-right" style="display:flex;gap:var(--space-sm)">
+        <button class="btn btn-ghost" onclick="runScan()"><i data-lucide="scan-search" style="width:14px;height:14px"></i> Run Full Scan</button>
+        <button class="btn btn-primary" onclick="exportReport()"><i data-lucide="file-down" style="width:14px;height:14px"></i> Export Report</button>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-md);margin-bottom:var(--space-lg)">
+      <div class="card card-sm" style="text-align:center;border-left:3px solid var(--critical)">
+        <div style="font-size:1.75rem;font-weight:900;color:var(--critical)">3</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">ACTIVE CLUSTERS</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-left:3px solid var(--warning)">
+        <div style="font-size:1.75rem;font-weight:900;color:var(--warning)">23</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">LINKED INCIDENTS</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-left:3px solid var(--accent-blue)">
+        <div style="font-size:1.75rem;font-weight:900;color:var(--accent-blue)">87%</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">AVG. CONFIDENCE</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-left:3px solid #a78bfa">
+        <div style="font-size:1.75rem;font-weight:900;color:#a78bfa">5</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">SUSPECT PROFILES</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-left:3px solid var(--success)">
+        <div style="font-size:1.75rem;font-weight:900;color:var(--success)">2</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">ARRESTS MADE</div>
+      </div>
+    </div>
+
+    <div class="serial-layout">
+      <!-- LEFT: Cluster List -->
+      <div class="serial-panel serial-left">
+        <div class="panel-hd">
+          <div style="font-weight:700;font-size:0.8125rem;margin-bottom:8px">Serial Crime Clusters</div>
+          <input type="text" class="form-control" placeholder="Search clusters..." style="font-size:0.8rem;padding:6px 10px">
+        </div>
+        <div class="panel-bd" id="cluster-list"></div>
+      </div>
+
+      <!-- CENTER: Map + Detail -->
+      <div class="serial-panel" style="overflow:hidden">
+        <div class="panel-hd" style="display:flex;align-items:center;gap:var(--space-sm)">
+          <div style="font-weight:700;font-size:0.8125rem;flex:1" id="center-title">Cluster SC-001: Chain Snatching Series</div>
+          <button class="btn btn-ghost btn-sm" id="view-toggle" onclick="toggleView()">
+            <i data-lucide="list" style="width:12px;height:12px"></i> Incidents
+          </button>
+        </div>
+        <div id="cluster-map" style="flex:1;min-height:0;height:100%"></div>
+      </div>
+
+      <!-- RIGHT: Analysis Panel -->
+      <div class="serial-panel serial-right">
+        <div class="panel-hd"><div style="font-weight:700;font-size:0.8125rem">AI Pattern Analysis</div></div>
+        <div class="panel-bd" id="analysis-panel"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+  function updateTime(){const el=document.getElementById('topnav-time');if(el)el.textContent=new Date().toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});}
+  updateTime();setInterval(updateTime,1000);
+  document.getElementById('sidebar-toggle')?.addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('collapsed'));
+
+  const clusters = [
+    {
+      id:'SC-001', name:'South Bengaluru Chain Snatching', severity:'critical', confidence:87,
+      incidents:7, firstDate:'Jul 5', lastDate:'Jul 12', suspectCount:1,
+      pattern:'Two-wheeler snatching during evening rush hour in residential zones',
+      nextPredicted:'Today 6â€“9 PM, Jayanagar / Banashankari',
+      modus:['Two-wheeler','Evening','Residential','Female victims','Alone'],
+      locations:[
+        {lat:12.920,lng:77.590,label:'JP Nagar',date:'Jul 12 09:15 AM',no:1},
+        {lat:12.925,lng:77.573,label:'Banashankari',date:'Jul 10 07:45 PM',no:2},
+        {lat:12.930,lng:77.582,label:'Jayanagar',date:'Jul 9 07:10 PM',no:3},
+        {lat:12.915,lng:77.595,label:'BTM Layout',date:'Jul 8 06:50 PM',no:4},
+        {lat:12.910,lng:77.588,label:'Arekere',date:'Jul 7 08:00 PM',no:5},
+        {lat:12.935,lng:77.560,label:'Vijayanagar',date:'Jul 6 07:20 PM',no:6},
+        {lat:12.945,lng:77.570,label:'Rajajinagar',date:'Jul 5 06:30 PM',no:7},
+      ],
+      similarities:[
+        {factor:'Time of Day', score:94, color:'#ef4444'},
+        {factor:'Location Type', score:91, color:'#ef4444'},
+        {factor:'Victim Profile', score:88, color:'#f59e0b'},
+        {factor:'Vehicle Type', score:85, color:'#f59e0b'},
+        {factor:'MO', score:82, color:'#3b82f6'},
+        {factor:'Direction', score:78, color:'#3b82f6'},
+      ],
+      suspectDesc:'Male, 25-35 years, dark complexion, black helmet, bike KA-05-XXXX, last seen Banashankari 2-wheeler with pillion rider'
+    },
+    {
+      id:'SC-002', name:'ATM Card Skimming Ring', severity:'high', confidence:79,
+      incidents:9, firstDate:'Jun 28', lastDate:'Jul 11', suspectCount:3,
+      pattern:'Card skimming device installation at ATMs near bus stands and railway stations between 2â€“5 AM',
+      nextPredicted:'Tonight 2â€“4 AM, Shivajinagar / Majestic area',
+      modus:['Night (2-5AM)','ATM kiosks','Near transit hubs','Device installation','Weekends'],
+      locations:[
+        {lat:12.981,lng:77.594,label:'Majestic ATM',date:'Jul 11',no:1},
+        {lat:12.977,lng:77.598,label:'Shivajinagar',date:'Jul 9',no:2},
+        {lat:12.985,lng:77.580,label:'Yeshwantpur',date:'Jul 6',no:3},
+        {lat:12.960,lng:77.602,label:'Koramangala',date:'Jul 4',no:4},
+        {lat:12.974,lng:77.614,label:'Indiranagar',date:'Jul 1',no:5},
+      ],
+      similarities:[
+        {factor:'Time of Day', score:96, color:'#ef4444'},
+        {factor:'Location Type', score:88, color:'#f59e0b'},
+        {factor:'Target', score:85, color:'#f59e0b'},
+        {factor:'Device Pattern', score:79, color:'#3b82f6'},
+        {factor:'Victim Profile', score:64, color:'#22c55e'},
+      ],
+      suspectDesc:'Syndicate of 3: Technical expert (device installation), Lookout, Data retrieval. Movement matches Andhra Pradesh number plates.'
+    },
+    {
+      id:'SC-003', name:'Warehouse Break-In Series', severity:'medium', confidence:71,
+      incidents:5, firstDate:'Jul 3', lastDate:'Jul 10', suspectCount:2,
+      pattern:'Friday night break-ins at industrial warehouses in peripheral areas, targets electronics and machinery',
+      nextPredicted:'This Friday, Peenya Industrial Area',
+      modus:['Friday nights','Industrial zones','Professional tools','Metal cutting','Group of 2-3'],
+      locations:[
+        {lat:13.028,lng:77.518,label:'Peenya Phase 1',date:'Jul 10',no:1},
+        {lat:13.022,lng:77.524,label:'Peenya Phase 2',date:'Jul 4',no:2},
+        {lat:13.035,lng:77.510,label:'Tumkur Road',date:'Jul 3',no:3},
+        {lat:13.045,lng:77.508,label:'Nelamangala',date:'Jun 28',no:4},
+      ],
+      similarities:[
+        {factor:'Day of Week', score:100, color:'#ef4444'},
+        {factor:'Location Type', score:87, color:'#f59e0b'},
+        {factor:'Target Category', score:84, color:'#f59e0b'},
+        {factor:'Entry Method', score:76, color:'#3b82f6'},
+        {factor:'Time Window', score:71, color:'#3b82f6'},
+      ],
+      suspectDesc:'Professional team. Vehicle: TATA Ace or similar loading vehicle. Known to have inside information about stock movement.'
+    }
+  ];
+
+  let selectedCluster = clusters[0];
+  let clusterMap = null;
+
+  function renderClusterList() {
+    const el = document.getElementById('cluster-list');
+    el.innerHTML = clusters.map((c,i) => `
+      <div class="cluster-card ${c.severity} ${i===0?'selected':''}" onclick="selectCluster(${i})">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div class="confidence-ring" style="background:conic-gradient(${c.severity==='critical'?'#ef4444':c.severity==='high'?'#f59e0b':'#3b82f6'} ${c.confidence*3.6}deg, rgba(255,255,255,0.06) 0deg)">
+            <span style="font-size:0.75rem;font-weight:900;color:${c.severity==='critical'?'#ef4444':c.severity==='high'?'#f59e0b':'#3b82f6'}">${c.confidence}%</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px">${c.id}</div>
+            <div style="font-weight:700;font-size:0.8125rem;color:var(--text-primary);margin-bottom:4px;line-height:1.3">${c.name}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">${c.incidents} incidents Â· ${c.firstDate} â€“ ${c.lastDate}</div>
+            <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">
+              ${c.modus.slice(0,3).map(m=>`<span class="modus-tag" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary)">${m}</span>`).join('')}
+            </div>
+            ${c.severity==='critical'?`<div style="display:flex;align-items:center;gap:4px;margin-top:6px;font-size:0.7rem;color:var(--critical);font-weight:700"><div class="alert-pulse" style="width:6px;height:6px;border-radius:50%;background:var(--critical);flex-shrink:0"></div>SERIAL CRIME ALERT</div>`:''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function selectCluster(idx) {
+    selectedCluster = clusters[idx];
+    document.querySelectorAll('.cluster-card').forEach((c,i) => c.classList.toggle('selected', i===idx));
+    document.getElementById('center-title').textContent = `Cluster ${selectedCluster.id}: ${selectedCluster.name}`;
+    renderMap();
+    renderAnalysis();
+  }
+
+  function renderMap() {
+    if(clusterMap) { clusterMap.remove(); clusterMap=null; }
+    const c = selectedCluster;
+    const centerLat = c.locations.reduce((a,l)=>a+l.lat,0)/c.locations.length;
+    const centerLng = c.locations.reduce((a,l)=>a+l.lng,0)/c.locations.length;
+    clusterMap = L.map('cluster-map', {zoomControl:true}).setView([centerLat,centerLng],13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'Â© CartoDB',maxZoom:19}).addTo(clusterMap);
+    
+    const color = c.severity==='critical'?'#ef4444':c.severity==='high'?'#f59e0b':'#3b82f6';
+    
+    // Connect with polyline
+    const pts = c.locations.map(l=>[l.lat,l.lng]);
+    L.polyline(pts, {color, weight:2, dashArray:'6 4', opacity:0.6}).addTo(clusterMap);
+    
+    // Heatmap
+    const heat = c.locations.map(l=>[l.lat,l.lng,0.8]);
+    L.heatLayer(heat,{radius:30,blur:20,gradient:{'0.4':'#f59e0b','0.65':'#ef4444','1':'#dc2626'}}).addTo(clusterMap);
+    
+    // Markers
+    c.locations.forEach((loc,i) => {
+      const marker = L.circleMarker([loc.lat,loc.lng], {
+        radius:12, fillColor:color, color:'#fff', weight:2, opacity:1, fillOpacity:0.9
+      }).addTo(clusterMap);
+      marker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px"><b>#${loc.no} ${loc.label}</b><br>${loc.date}</div>`);
+      const icon = L.divIcon({
+        html:`<div style="color:#fff;font-size:9px;font-weight:900;width:24px;height:24px;display:flex;align-items:center;justify-content:center">${i+1}</div>`,
+        className:'', iconSize:[24,24], iconAnchor:[12,12]
+      });
+      L.marker([loc.lat,loc.lng],{icon}).addTo(clusterMap);
+    });
+    
+    // Predicted next location
+    if(c.locations.length>1) {
+      const last = c.locations[c.locations.length-1];
+      L.circleMarker([last.lat+0.015,last.lng+0.008],{
+        radius:16,fillColor:'rgba(245,158,11,0.3)',color:'#f59e0b',weight:2,dashArray:'4 4',fillOpacity:0.4
+      }).addTo(clusterMap).bindPopup('<b>âš ï¸ PREDICTED NEXT LOCATION</b>');
+    }
+  }
+
+  function renderAnalysis() {
+    const c = selectedCluster;
+    const color = c.severity==='critical'?'#ef4444':c.severity==='high'?'#f59e0b':'#3b82f6';
+    document.getElementById('analysis-panel').innerHTML = `
+      <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-md)">
+        <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:${color};margin-bottom:6px">ðŸ¤– AI SERIAL CRIME ALERT</div>
+        <div style="font-size:0.8rem;color:var(--text-primary);line-height:1.6">${c.incidents} incidents show <strong>${c.confidence}%</strong> pattern match. Likely perpetrated by <strong>${c.suspectCount} individual(s)</strong>. Predicted next incident: <strong>${c.nextPredicted}</strong></div>
+      </div>
+
+      <div style="margin-bottom:var(--space-md)">
+        <div style="font-weight:700;font-size:0.8rem;margin-bottom:var(--space-sm);color:var(--text-primary)">Pattern Similarity Analysis</div>
+        ${c.similarities.map(s=>`
+          <div class="similarity-row">
+            <div style="font-size:0.75rem;color:var(--text-secondary);width:110px;flex-shrink:0">${s.factor}</div>
+            <div class="sim-bar"><div class="sim-fill" style="width:${s.score}%;background:${s.color}"></div></div>
+            <div style="font-size:0.75rem;font-weight:700;color:${s.color};width:36px;text-align:right;flex-shrink:0">${s.score}%</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="margin-bottom:var(--space-md)">
+        <div style="font-weight:700;font-size:0.8rem;margin-bottom:var(--space-sm);color:var(--text-primary)">Modus Operandi Fingerprint</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${c.modus.map(m=>`<span class="modus-tag" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--accent-blue)">${m}</span>`).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:var(--space-md)">
+        <div style="font-weight:700;font-size:0.8rem;margin-bottom:var(--space-sm);color:var(--text-primary)">Suspect Description</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.6;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-sm)">${c.suspectDesc}</div>
+      </div>
+
+      <div style="margin-bottom:var(--space-md)">
+        <div style="font-weight:700;font-size:0.8rem;margin-bottom:var(--space-sm);color:var(--text-primary)">Incident Sequence</div>
+        ${c.locations.map((l,i)=>`
+          <div class="incident-timeline-item">
+            ${i<c.locations.length-1?'<div class="itl-connector"></div>':''}
+            <div class="itl-dot" style="background:${color}"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary)">#${l.no} ${l.label}</div>
+              <div style="font-size:0.7rem;color:var(--text-muted)">${l.date}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-md);padding:var(--space-md)">
+        <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;color:var(--warning);margin-bottom:6px">âš¡ AI RECOMMENDED ACTIONS</div>
+        <div style="font-size:0.8rem;color:var(--text-muted);line-height:1.7">
+          1. Deploy plainclothes units at predicted next location<br>
+          2. Issue BOLO with suspect description<br>
+          3. Review CCTV footage from all ${c.incidents} locations<br>
+          4. Cross-reference with local informant network<br>
+          5. Coordinate with neighboring divisions
+        </div>
+      </div>
+    `;
+  }
+
+  function runScan() {
+    const btn = document.querySelector('[onclick="runScan()"]');
+    btn.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;animation:spin 1s linear infinite"></i> Scanning...';
+    lucide.createIcons();
+    setTimeout(()=>{btn.innerHTML='<i data-lucide="scan-search" style="width:14px;height:14px"></i> Run Full Scan';lucide.createIcons();},3000);
+  }
+  function exportReport() { window.print(); }
+  function toggleView() {}
+
+  // Init
+  renderClusterList();
+  renderMap();
+  renderAnalysis();
+</script>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/ai-intelligence-overlay.js"></script>
+</body>
+</html>
+

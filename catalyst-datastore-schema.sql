@@ -1,0 +1,114 @@
+-- ============================================================
+-- KSP Intelligence — Zoho Catalyst Data Store Table Definitions
+-- Run these in Catalyst Console → Data Store → ZCQL Console
+-- ============================================================
+
+-- NOTE: Catalyst Data Store tables are created via the Console UI.
+-- This file documents the schema for reference.
+-- Create each table via Console → Data Store → Create Table
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: CrimeRecord                                         │
+-- ├────────────────────────────────────────────────────────────┤
+-- │ Column Name         │ Type     │ Notes                     │
+-- ├─────────────────────┼──────────┼───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ crime_id            │ text     │ e.g. CR-00001             │
+-- │ case_number         │ text     │ e.g. KSP-2025-A1B2C3     │
+-- │ crime_type          │ text     │ Theft, Robbery, etc.      │
+-- │ category            │ text     │ theft, violent, etc.      │
+-- │ district            │ text     │ Bengaluru Urban, etc.     │
+-- │ police_station      │ text     │                           │
+-- │ lat                 │ double   │ Latitude                  │
+-- │ lng                 │ double   │ Longitude                 │
+-- │ date                │ text     │ YYYY-MM-DD                │
+-- │ time                │ text     │ HH:MM AM/PM              │
+-- │ severity            │ text     │ low/medium/high/critical  │
+-- │ status              │ text     │ Active/Resolved/Arrested  │
+-- │ weather             │ text     │                           │
+-- │ landmark            │ text     │                           │
+-- │ vehicle_info        │ text     │                           │
+-- │ phone_number        │ text     │                           │
+-- │ known_associates    │ text     │                           │
+-- │ crime_method        │ text     │                           │
+-- │ unemployment_rate   │ double   │                           │
+-- │ literacy_rate       │ double   │                           │
+-- │ population_density  │ text     │                           │
+-- └────────────────────────────────────────────────────────────┘
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: Suspect                                             │
+-- ├─────────────────────┬──────────┬───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ name                │ text     │                           │
+-- │ age                 │ int      │                           │
+-- │ gender              │ text     │                           │
+-- │ is_repeat_offender  │ boolean  │                           │
+-- │ crime_record_id     │ text     │ FK → CrimeRecord.crime_id │
+-- └────────────────────────────────────────────────────────────┘
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: CaseRecord                                          │
+-- ├─────────────────────┬──────────┬───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ case_id             │ text     │ Matches crime_id          │
+-- │ case_number         │ text     │                           │
+-- │ title               │ text     │                           │
+-- │ status              │ text     │ New/Active/Resolved       │
+-- │ priority            │ text     │ low/medium/high/critical  │
+-- │ assigned_officer    │ text     │                           │
+-- │ description         │ text     │                           │
+-- └────────────────────────────────────────────────────────────┘
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: Users                                               │
+-- ├─────────────────────┬──────────┬───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ username            │ text     │ Unique login identifier   │
+-- │ password_hash       │ text     │ SHA-256 hash              │
+-- │ name                │ text     │ Display name              │
+-- │ badge               │ text     │                           │
+-- │ role                │ text     │ DGP Admin, Field Officer  │
+-- │ district            │ text     │                           │
+-- │ active              │ boolean  │                           │
+-- └────────────────────────────────────────────────────────────┘
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: Evidence                                            │
+-- ├─────────────────────┬──────────┬───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ evidence_id         │ text     │                           │
+-- │ case_id             │ text     │ FK → CaseRecord.case_id   │
+-- │ name                │ text     │                           │
+-- │ type                │ text     │ CCTV, Fingerprint, etc.   │
+-- │ uploaded_by         │ text     │                           │
+-- │ timestamp           │ text     │                           │
+-- │ verification_status │ text     │ Pending/Verified          │
+-- │ hash_id             │ text     │                           │
+-- └────────────────────────────────────────────────────────────┘
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: AuditLog                                            │
+-- ├─────────────────────┬──────────┬───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ audit_id            │ text     │                           │
+-- │ user                │ text     │                           │
+-- │ time                │ text     │                           │
+-- │ ip                  │ text     │                           │
+-- │ device              │ text     │                           │
+-- │ action              │ text     │                           │
+-- │ details             │ text     │                           │
+-- │ result              │ text     │ Success/Failed            │
+-- └────────────────────────────────────────────────────────────┘
+
+-- ┌────────────────────────────────────────────────────────────┐
+-- │ TABLE: District                                            │
+-- ├─────────────────────┬──────────┬───────────────────────────┤
+-- │ ROWID (auto)        │ bigint   │ Auto-generated PK         │
+-- │ district_id         │ text     │ e.g. BLR                  │
+-- │ name                │ text     │ Bengaluru Urban           │
+-- │ lat                 │ double   │                           │
+-- │ lng                 │ double   │                           │
+-- │ risk_score          │ int      │ 0-100                     │
+-- │ threat_level        │ text     │ low/medium/high           │
+-- └────────────────────────────────────────────────────────────┘

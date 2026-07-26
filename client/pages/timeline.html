@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crime Timeline Replay — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <style>
+    .timeline-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 120px);
+    }
+    @media (max-width: 1024px) {
+      .timeline-layout { grid-template-columns: 1fr; }
+      .side-filters { display: none; }
+    }
+    .side-filters {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      overflow-y: auto;
+    }
+    .map-container-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      height: 100%;
+    }
+    .full-map-timeline {
+      flex: 1;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item active" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Timeline Replay <span>/ Karnataka</span></div>
+    <div class="topnav-search">
+      <i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i>
+      <input type="text" id="global-search" placeholder="Search timeline events…">
+    </div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="clock" style="width:24px;height:24px;color:var(--accent-blue)"></i> Crime Timeline Replay</h1>
+        <p class="page-header-sub">Chronological mapping of past incident feeds • Dynamic playback speed • Sector filters</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary btn-sm" onclick="window.location.href='reports.html'">
+          <i data-lucide="download" style="width:14px;height:14px"></i>
+          Export Replay Log
+        </button>
+      </div>
+    </div>
+
+    <!-- Timeline Layout -->
+    <div class="timeline-layout">
+      <!-- Left Filters -->
+      <div class="side-filters">
+        <div class="card card-sm">
+          <div class="card-title mb-md"><i data-lucide="filter" style="width:14px;height:14px;color:var(--accent-blue)"></i> Filter Incidents</div>
+          <div class="form-group">
+            <label class="form-label">Crime Type</label>
+            <select id="filter-type" class="form-control">
+              <option value="all">All Categories</option>
+              <option value="Vehicle Theft">Vehicle Theft</option>
+              <option value="Cybercrime">Cybercrime</option>
+              <option value="Robbery">Robbery</option>
+              <option value="Assault">Assault</option>
+              <option value="Narcotics">Narcotics</option>
+              <option value="Financial Fraud">Financial Fraud</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">District Focus</label>
+            <select id="filter-district" class="form-control">
+              <option value="all">All Karnataka</option>
+              <option value="Bengaluru Urban">Bengaluru Urban</option>
+              <option value="Mysuru">Mysuru</option>
+              <option value="Belagavi">Belagavi</option>
+              <option value="Kalaburagi">Kalaburagi</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Severity Level</label>
+            <select id="filter-severity" class="form-control">
+              <option value="all">All Levels</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card card-sm">
+          <div class="card-title mb-sm"><i data-lucide="info" style="width:14px;height:14px;color:var(--accent-cyan)"></i> Replay Guide</div>
+          <div class="text-xs text-muted" style="line-height:1.6">
+            Use bottom playback control panel to Play, Pause, or adjust Speed. Scrubber slider jumps directly to time intervals. Circles bounce onto map upon incident timestamps.
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Map + Bottom Controls -->
+      <div class="map-container-timeline">
+        <div class="full-map-timeline">
+          <div id="timeline-map" style="width:100%;height:100%"></div>
+        </div>
+
+        <!-- Controls container populated by timeline-replay.js -->
+        <div id="timeline-controls-container"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script src="../js/timeline-replay.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  KSPTimelineReplay.init('timeline-map', 'timeline-controls-container');
+  KSPCopilot.replaceFAB();
+
+  // Watch filter elements
+  const filterType = document.getElementById('filter-type');
+  const filterDistrict = document.getElementById('filter-district');
+  const filterSeverity = document.getElementById('filter-severity');
+
+  function triggerFilters() {
+    KSPTimelineReplay.filterEvents({
+      type: filterType.value,
+      district: filterDistrict.value,
+      severity: filterSeverity.value
+    });
+  }
+
+  filterType?.addEventListener('change', triggerFilters);
+  filterDistrict?.addEventListener('change', triggerFilters);
+  filterSeverity?.addEventListener('change', triggerFilters);
+});
+</script>
+</body>
+</html>

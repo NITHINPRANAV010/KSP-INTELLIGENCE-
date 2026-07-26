@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>District Intelligence — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .district-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: var(--space-lg);
+    }
+    @media (max-width: 1024px) {
+      .district-layout { grid-template-columns: 1fr; }
+    }
+    .district-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item active" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i>
+        <span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">District Profile <span>/ Karnataka</span></div>
+    <div class="topnav-search">
+      <i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i>
+      <input type="text" id="global-search" placeholder="Search district intelligence…">
+    </div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <!-- Header with Selector -->
+    <div class="page-header">
+      <div class="page-header-left flex items-center gap-md">
+        <div class="kpi-icon-wrap kpi-icon-blue"><i data-lucide="map-pin" style="width:20px;height:20px"></i></div>
+        <div>
+          <select id="district-selector" class="form-control font-bold" style="font-size:1.25rem;border:none;background:transparent;padding-left:0;color:var(--text-primary);width:auto;cursor:pointer">
+            <!-- populated by JS -->
+          </select>
+          <p class="page-header-sub">Comprehensive localized threat analysis • Prediction summary • Active repeat offenders</p>
+        </div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-secondary btn-sm" id="btn-export-district">
+          <i data-lucide="download" style="width:14px;height:14px"></i>
+          Export District Briefing
+        </button>
+      </div>
+    </div>
+
+    <!-- Layout -->
+    <div class="district-layout">
+      <!-- Left Column: Risk & AI Analysis -->
+      <div class="flex flex-col gap-lg">
+        <!-- Risk Gauge -->
+        <div class="card">
+          <div class="card-title mb-md">District Risk Profile</div>
+          <div style="text-align:center;padding:var(--space-md) 0">
+            <div id="district-risk-score" style="font-size:3.5rem;font-weight:900;color:var(--critical);line-height:1">94%</div>
+            <div id="district-risk-label" class="badge badge-critical mt-sm">CRITICAL RISK</div>
+          </div>
+          <div class="divider"></div>
+          <!-- Explainable AI -->
+          <div class="ai-why-box mt-md">
+            <div class="ai-why-header"><i data-lucide="brain-circuit" style="width:12px;height:12px"></i> AI Risk Factors</div>
+            <div id="district-factors">
+              <!-- populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini Heatmap -->
+        <div class="card">
+          <div class="card-title mb-md">Localized Active Zones</div>
+          <div style="height:180px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border)">
+            <div id="district-mini-map" style="width:100%;height:100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Graphs, Offenders, Patrols -->
+      <div class="flex flex-col gap-lg">
+        <div class="grid-two">
+          <!-- Monthly Crime Trend -->
+          <div class="card">
+            <div class="card-title mb-md">District Crime Trend (2025)</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="district-trend-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Crime Categories -->
+          <div class="card">
+            <div class="card-title mb-md">Crime Categories Breakdown</div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="district-category-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-two">
+          <!-- Repeat Offenders in District -->
+          <div class="card">
+            <div class="card-title mb-md"><i data-lucide="user-x" style="width:14px;height:14px;color:var(--accent-cyan)"></i> Active Repeat Offenders</div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Offender</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="district-offenders-table">
+                  <!-- populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- District Predictions & Patrol Recommendations -->
+          <div class="card">
+            <div class="card-title mb-md"><i data-lucide="navigation" style="width:14px;height:14px;color:var(--success)"></i> Tactical Recommendations</div>
+            <div id="district-recommendations-container" class="flex flex-col gap-sm">
+              <!-- populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Officer Notes -->
+        <div class="card">
+          <div class="card-title mb-sm">Local Intelligence & Officer Notes</div>
+          <textarea class="form-control" rows="3" placeholder="Enter intelligence updates or tactical logs for this district..."></textarea>
+          <div class="flex justify-between items-center mt-sm">
+            <span class="text-xs text-muted">Notes automatically shared with district duty officers.</span>
+            <button class="btn btn-primary btn-sm" onclick="showToast('Tactical intelligence notes saved.', 'success')">Save Notes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<!-- Phase 4 AI Core -->
+<script src="../ai/core/ai-config.js"></script>
+<script src="../ai/core/ai-bus.js"></script>
+<!-- Phase 4 AI Modules -->
+<script src="../ai/prediction/crime-predictor.js"></script>
+<script src="../ai/explainability/explainer.js"></script>
+<script src="../ai/decision/decision-support.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+
+  // Initialize KSPDatabase if available
+  if (window.KSPDatabase) {
+    KSPDatabase.init();
+  }
+
+  // Populate Select List
+  const selector = document.getElementById('district-selector');
+  if (selector && window.KSPDatabase) {
+    selector.innerHTML = KSPDatabase.districts.map(d => `
+      <option value="${d.id}">${d.name}</option>
+    `).join('');
+  }
+
+  // Mini Map Init
+  const miniMap = L.map('district-mini-map', {
+    center: [12.9716, 77.5946],
+    zoom: 11,
+    zoomControl: false,
+    attributionControl: false
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18
+  }).addTo(miniMap);
+
+  // Map markers layer group
+  const markerGroup = L.layerGroup().addTo(miniMap);
+
+  // Chart instances
+  let trendChartInstance = null;
+  let categoryChartInstance = null;
+
+  // Render Function
+  function renderDistrictProfile(districtId) {
+    const d = KSPDatabase ? KSPDatabase.districts.find(x => x.id === districtId) : null;
+    if (!d) return;
+
+    // Clear old map layers
+    markerGroup.clearLayers();
+
+    // Fly Mini Map
+    miniMap.setView([d.lat, d.lng], 10);
+    // Draw single circle hotspot
+    const color = d.risk === 'critical' ? '#EF4444' : d.risk === 'high' ? '#F59E0B' : '#3B82F6';
+    L.circle([d.lat, d.lng], {
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.25,
+      radius: 4000
+    }).addTo(markerGroup);
+
+    // Plot real incidents on the mini map for that district
+    if (window.KSPDatabase) {
+      const incidents = KSPDatabase.incidents.filter(i => i.district === d.name).slice(0, 10);
+      incidents.forEach(inc => {
+        L.circleMarker([inc.lat, inc.lng], {
+          radius: 5,
+          color: inc.severity === 'critical' ? '#EF4444' : inc.severity === 'high' ? '#F59E0B' : '#3B82F6',
+          fillColor: inc.severity === 'critical' ? '#EF4444' : inc.severity === 'high' ? '#F59E0B' : '#3B82F6',
+          fillOpacity: 0.8
+        }).addTo(markerGroup).bindPopup(`<b>${inc.caseNumber}</b><br>${inc.crimeType}`);
+      });
+    }
+
+    // Calculate real live risk using Risk Engine
+    let riskScore = d.score;
+    let riskLevel = d.risk;
+    let riskFactors = [];
+    if (window.KSPRiskEngine) {
+      const riskAnalysis = KSPRiskEngine.calculateDistrictRisk(d.name);
+      riskScore = riskAnalysis.score;
+      riskLevel = riskAnalysis.level;
+      riskFactors = riskAnalysis.factors;
+    }
+
+    // Score & Risk Title
+    const scoreEl = document.getElementById('district-risk-score');
+    const labelEl = document.getElementById('district-risk-label');
+    scoreEl.textContent = `${riskScore}%`;
+    scoreEl.style.color = riskLevel === 'critical' ? 'var(--critical)' : riskLevel === 'high' ? 'var(--warning)' : 'var(--accent-blue)';
+
+    labelEl.textContent = `${riskLevel.toUpperCase()} RISK`;
+    labelEl.className = `badge badge-${riskLevel}`;
+
+    // AI Factors
+    const factorsContainer = document.getElementById('district-factors');
+    if (riskFactors.length > 0) {
+      factorsContainer.innerHTML = riskFactors.map(f => `
+        <div class="ai-why-factor">${f.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div>
+      `).join('');
+    } else {
+      factorsContainer.innerHTML = `<div class="ai-why-factor">General baseline risk remains stable.</div>`;
+    }
+
+    // Active Offenders Table from Real Database
+    const offendersTable = document.getElementById('district-offenders-table');
+    const offendersList = window.KSPDatabase ? KSPDatabase.getOffenders() : [];
+    const districtOffenders = offendersList.filter(o => o.district === d.name);
+    if (districtOffenders.length > 0) {
+      offendersTable.innerHTML = districtOffenders.map(o => `
+        <tr>
+          <td class="bold">${o.name}</td>
+          <td><span class="risk-badge risk-${o.riskScore >= 85 ? 'critical' : o.riskScore >= 65 ? 'high' : 'medium'}">${o.riskScore}%</span></td>
+          <td><span class="status-pill status-${o.status.toLowerCase().replace(/ /g, '-') || 'active'}">${o.status}</span></td>
+        </tr>
+      `).join('');
+    } else {
+      offendersTable.innerHTML = `<tr><td colspan="3" class="text-muted text-center" style="padding:var(--space-md)">No repeat offenders active in this district.</td></tr>`;
+    }
+
+    // Predictions & Recommendations from Real Predictor
+    const recsContainer = document.getElementById('district-recommendations-container');
+    let pred = null;
+    if (window.KSPCrimePredictor) {
+      pred = KSPCrimePredictor.predict({ district: d.name, horizon: 'week' });
+    }
+    if (pred) {
+      const recText = pred.recommendations[0]?.action || 'Maintain baseline patrol density.';
+      const recReason = pred.recommendations[0]?.reason || 'Prediction within normal limits.';
+      recsContainer.innerHTML = `
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-md)">
+          <div class="bold text-sm text-primary mb-xs">Forecast: +${pred.predictedCount} Predicted Incidents</div>
+          <div class="text-xs text-muted mb-sm">AI Confidence: <strong style="color:var(--accent-cyan)">${Math.round(pred.confidence * 100)}%</strong> · Risk: <strong style="color:var(--critical)">${pred.riskLevel}</strong></div>
+          <div class="text-xs text-secondary" style="line-height:1.5"><strong>Tactical Action:</strong> ${recText} — <em class="text-muted">${recReason}</em></div>
+        </div>
+      `;
+    } else {
+      recsContainer.innerHTML = `
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-md)">
+          <div class="text-xs text-muted">No high-probability predictions active for this district. Recommend maintaining baseline patrols.</div>
+        </div>
+      `;
+    }
+
+    // Charts Rendering
+    renderCharts(d.name);
+  }
+
+
+  function renderCharts(districtName) {
+    if (trendChartInstance) trendChartInstance.destroy();
+    if (categoryChartInstance) categoryChartInstance.destroy();
+
+    const ctxTrend = document.getElementById('district-trend-chart').getContext('2d');
+    const ctxCat = document.getElementById('district-category-chart').getContext('2d');
+
+    // Create random datasets per district for dynamic look
+    const mockTrendData = Array.from({length: 12}, () => Math.floor(40 + Math.random() * 80));
+    const solvedData = mockTrendData.map(v => Math.floor(v * 0.6));
+
+    trendChartInstance = new Chart(ctxTrend, {
+      type: 'line',
+      data: {
+        labels: KSPData.monthlyTrends.labels,
+        datasets: [
+          {
+            label: 'Total Incidents',
+            data: mockTrendData,
+            borderColor: '#3B82F6',
+            backgroundColor: 'rgba(59,130,246,0.1)',
+            fill: true,
+            tension: 0.4
+          },
+          {
+            label: 'Solved Cases',
+            data: solvedData,
+            borderColor: '#22C55E',
+            backgroundColor: 'transparent',
+            tension: 0.4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748B', font: { size: 10 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748B', font: { size: 10 } } }
+        }
+      }
+    });
+
+    categoryChartInstance = new Chart(ctxCat, {
+      type: 'doughnut',
+      data: {
+        labels: ['Vehicle Theft', 'Cybercrime', 'Robbery', 'Assault', 'Narcotics'],
+        datasets: [{
+          data: [35, 25, 20, 10, 10],
+          backgroundColor: ['#3B82F6', '#22D3EE', '#F59E0B', '#EF4444', '#8B5CF6'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: '#CBD5E1', boxWidth: 12, font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  // Handle Selection Change
+  selector?.addEventListener('change', (e) => {
+    renderDistrictProfile(e.target.value);
+  });
+
+  // Export report
+  document.getElementById('btn-export-district')?.addEventListener('click', () => {
+    const dName = selector.options[selector.selectedIndex].text;
+    showToast(`District intelligence briefing compiled for ${dName}. PDF downloading.`, 'success');
+  });
+
+  // Initial Render
+  if (selector && selector.value) {
+    renderDistrictProfile(selector.value);
+  }
+});
+</script>
+</body>
+</html>

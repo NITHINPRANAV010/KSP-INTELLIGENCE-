@@ -85,7 +85,7 @@
       this.save();
 
       // Show native UI Toast (requires app.js window.showToast)
-      if (window.showToast && !window.KSP_NOTIFICATIONS_MUTED && !document.getElementById('ksp-copilot-panel')?.classList.contains('open')) {
+      if (window.showToast) {
         window.showToast(`${title} — ${message}`, priority === 'critical' ? 'critical' : priority === 'high' ? 'warning' : 'info', 5000);
       }
 

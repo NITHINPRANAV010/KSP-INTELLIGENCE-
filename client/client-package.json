@@ -1,0 +1,9 @@
+{
+  "name": "ksp-web-client",
+  "version": "1.0.0",
+  "homepage": "index.html",
+  "client": {
+    "name": "ksp-web-client",
+    "type": "basic"
+  }
+}

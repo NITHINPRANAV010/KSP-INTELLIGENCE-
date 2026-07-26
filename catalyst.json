@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "ksp_api": {
+      "type": "advancedio",
+      "stack": "node18",
+      "main": "index.js"
+    },
+    "targets": [
+      "ksp_api"
+    ],
+    "ignore": [],
+    "source": "functions"
+  },
+  "client": {
+    "source": "client"
+  }
+}

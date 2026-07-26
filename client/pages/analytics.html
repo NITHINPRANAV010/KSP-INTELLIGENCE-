@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crime Analytics — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .analytics-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-lg); }
+    .analytics-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:var(--space-lg); }
+    @media(max-width:1280px){ .analytics-grid-3{grid-template-columns:1fr 1fr} }
+    @media(max-width:1024px){ .analytics-grid,.analytics-grid-3{grid-template-columns:1fr} }
+    .chart-h-sm { height:220px; }
+    .chart-h-md { height:280px; }
+    .chart-h-lg { height:340px; }
+    .cat-row {
+      display:flex;align-items:center;gap:var(--space-md);padding:10px 0;
+      border-bottom:1px solid rgba(255,255,255,0.04);
+    }
+    .cat-row:last-child { border-bottom:none; }
+    .trend-pill {
+      display:inline-flex;align-items:center;gap:3px;
+      font-size:0.6875rem;font-weight:600;padding:3px 7px;border-radius:99px;
+    }
+    .trend-up { background:var(--critical-dim);color:var(--critical); }
+    .trend-dn { background:var(--success-dim);color:var(--success); }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item active" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" class="sidebar-toggle-icon" style="width:16px;height:16px"></i><span class="sidebar-toggle-label" style="font-size:0.75rem">Collapse</span></button></div>
+  </aside>
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Crime Analytics <span>/ 2025</span></div>
+    <div class="topnav-search"><i data-lucide="search" class="topnav-search-icon" style="width:14px;height:14px"></i><input type="text" id="global-search" placeholder="Search analytics…"></div>
+    <div class="topnav-actions">
+      <span class="font-mono text-xs text-muted" id="topnav-time"></span>
+      <button class="topnav-btn"><i data-lucide="bell" style="width:16px;height:16px"></i><span class="notif-badge">5</span></button>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content" id="main-content">
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="bar-chart-3" style="width:24px;height:24px;color:var(--accent-blue)"></i> Crime Analytics</h1>
+        <p class="page-header-sub">Comprehensive crime trend analysis, hotspot breakdown, and district comparison</p>
+      </div>
+      <div class="page-header-actions">
+        <select class="form-control" style="width:auto">
+          <option>Year 2025</option>
+          <option>Year 2024</option>
+          <option>Last 6 Months</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="window.location.href='reports.html'">
+          <i data-lucide="download" style="width:14px;height:14px"></i>Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary KPIs -->
+    <div class="analytics-grid-3 stagger-item" style="margin-bottom:var(--space-lg)">
+      <div class="card card-accent-red flex items-center gap-lg">
+        <div class="kpi-icon-wrap kpi-icon-red" style="width:48px;height:48px"><i data-lucide="trending-up" style="width:22px;height:22px"></i></div>
+        <div>
+          <div class="text-3xl font-black text-primary" data-count="7841">0</div>
+          <div class="text-sm text-muted">Total Crimes YTD</div>
+          <div class="text-xs text-critical">↑ +18.4% vs. 2024</div>
+        </div>
+      </div>
+      <div class="card card-accent-green flex items-center gap-lg">
+        <div class="kpi-icon-wrap kpi-icon-green" style="width:48px;height:48px"><i data-lucide="check-circle-2" style="width:22px;height:22px"></i></div>
+        <div>
+          <div class="text-3xl font-black text-primary" data-count="4712">0</div>
+          <div class="text-sm text-muted">Cases Solved YTD</div>
+          <div class="text-xs text-success">↑ 60.1% solve rate</div>
+        </div>
+      </div>
+      <div class="card card-accent-cyan flex items-center gap-lg">
+        <div class="kpi-icon-wrap kpi-icon-cyan" style="width:48px;height:48px"><i data-lucide="clock" style="width:22px;height:22px"></i></div>
+        <div>
+          <div class="text-3xl font-black text-primary"><span data-count="4.2" data-decimals="1">0</span>h</div>
+          <div class="text-sm text-muted">Avg. Response Time</div>
+          <div class="text-xs text-success">↓ -12min vs. last month</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 1: Monthly Trend + Donut -->
+    <div class="analytics-grid stagger-item delay-100" style="margin-bottom:var(--space-lg)">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="trending-up" style="width:15px;height:15px;color:var(--accent-blue)"></i> Monthly Crime Trends</div>
+          <div class="tabs" style="min-width:180px">
+            <button class="tab-btn active">All</button>
+            <button class="tab-btn">Cyber</button>
+            <button class="tab-btn">Theft</button>
+          </div>
+        </div>
+        <div class="chart-h-md"><canvas id="analytics-trend"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="pie-chart" style="width:15px;height:15px;color:var(--accent-cyan)"></i> Crime Category Breakdown</div>
+        </div>
+        <div class="chart-h-md"><canvas id="analytics-donut"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 2: District Bar + Time of Day -->
+    <div class="analytics-grid stagger-item delay-200" style="margin-bottom:var(--space-lg)">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="map-pin" style="width:15px;height:15px;color:var(--warning)"></i> District Crime Hotspots</div>
+          <span class="badge badge-critical">Top 8</span>
+        </div>
+        <div class="chart-h-lg"><canvas id="analytics-district"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="clock" style="width:15px;height:15px;color:var(--accent-violet)"></i> Crimes by Time of Day</div>
+          <span class="badge badge-neutral">Pattern Analysis</span>
+        </div>
+        <div class="chart-h-lg"><canvas id="analytics-time"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 3: Crime Type Details + Radar -->
+    <div class="analytics-grid stagger-item delay-300" style="margin-bottom:var(--space-lg)">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="list" style="width:15px;height:15px;color:var(--accent-blue)"></i> Crime Category Analysis</div>
+        </div>
+        <div id="category-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="activity" style="width:15px;height:15px;color:var(--accent-cyan)"></i> Crime Type Radar</div>
+          <span class="badge badge-info">Month vs Month</span>
+        </div>
+        <div class="chart-h-md"><canvas id="analytics-radar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- District Comparison Table -->
+    <div class="card stagger-item delay-400">
+      <div class="card-header">
+        <div class="card-title"><i data-lucide="table" style="width:15px;height:15px;color:var(--accent-blue)"></i> District Comparison Table</div>
+        <button class="btn btn-secondary btn-sm"><i data-lucide="filter" style="width:12px;height:12px"></i> Filter</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead><tr>
+            <th>District</th><th>Total Crimes</th><th>Solved</th><th>Solve Rate</th>
+            <th>Risk Level</th><th>Risk Score</th><th>Trend</th>
+          </tr></thead>
+          <tbody id="district-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/filter-engine.js"></script>
+<script src="../js/risk-engine.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/counters.js"></script>
+<script src="../js/charts.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<!-- Phase 5 Enterprise Platform -->
+<script src="../js/enterprise/main.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script>
+let trendChart = null;
+let donutChart = null;
+let districtBarChart = null;
+let timeChart = null;
+let radarChart = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  KSPCopilot.replaceFAB();
+  KSPCharts.applyDefaults();
+
+  // Initialize charts
+  trendChart = KSPCharts.initTrendChart('analytics-trend');
+  donutChart = KSPCharts.initDonutChart('analytics-donut');
+  districtBarChart = KSPCharts.initDistrictBarChart('analytics-district');
+  timeChart = KSPCharts.initTimeChart('analytics-time');
+  radarChart = KSPCharts.initRadarChart('analytics-radar');
+
+  function updateAnalyticsData() {
+    const list = KSPFilterEngine.query();
+    const metrics = KSPFilterEngine.getMetrics();
+    const chartData = KSPFilterEngine.getChartData();
+
+    // 1. Update KPI numbers
+    const totalEl = document.querySelector('[data-count="7841"]');
+    const solvedEl = document.querySelector('[data-count="4712"]');
+    if (totalEl) totalEl.textContent = metrics.total.toLocaleString('en-IN');
+    if (solvedEl) solvedEl.textContent = metrics.solved.toLocaleString('en-IN');
+
+    // 2. Category list
+    const catList = document.getElementById('category-list');
+    if (catList) {
+      catList.innerHTML = KSPData.crimeCategories.map(c => {
+        const count = metrics.categoryCounts[c.id] || 0;
+        const pct = metrics.total > 0 ? Math.round(count / metrics.total * 100) : 0;
+        return `
+          <div class="cat-row">
+            <div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+            <div style="flex:1">
+              <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary)">${c.label}</div>
+              <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:99px;margin-top:5px;overflow:hidden">
+                <div style="width:${pct}%;height:100%;background:${c.color};border-radius:99px;transition:width 1s"></div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:0.875rem;font-weight:700;color:var(--text-primary)">${count.toLocaleString('en-IN')}</div>
+              <span class="trend-pill ${c.trend > 0 ? 'trend-up' : 'trend-dn'}">${c.trend > 0 ? '↑' : '↓'} ${Math.abs(c.trend)}%</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 3. District Table (Dynamic recalculation of risk profiles)
+    const tbody = document.getElementById('district-table-body');
+    if (tbody) {
+      const calculatedDistricts = KSPDatabase.districts.map(d => {
+        const risk = KSPRiskEngine.calculateDistrictRisk(d.name);
+        const localCrimes = list.filter(i => i.district === d.name);
+        const solved = localCrimes.filter(i => i.status === 'Resolved' || i.status === 'Arrested').length;
+        const rate = localCrimes.length > 0 ? Math.round(solved / localCrimes.length * 100) : 0;
+        return {
+          name: d.name,
+          crimesCount: localCrimes.length,
+          solvedCount: solved,
+          rate: rate,
+          risk: risk.level,
+          score: risk.score
+        };
+      }).sort((a,b) => b.crimesCount - a.crimesCount);
+
+      tbody.innerHTML = calculatedDistricts.map(d => {
+        const riskColor = { critical:'#EF4444', high:'#F59E0B', medium:'#3B82F6', low:'#22C55E' }[d.risk];
+        return `<tr>
+          <td class="bold">${d.name}</td>
+          <td class="bold" style="color:var(--text-primary)">${d.crimesCount.toLocaleString('en-IN')}</td>
+          <td>${d.solvedCount.toLocaleString('en-IN')}</td>
+          <td><div style="display:flex;align-items:center;gap:8px"><div style="width:50px;height:4px;background:rgba(255,255,255,0.07);border-radius:99px;overflow:hidden"><div style="width:${d.rate}%;height:100%;background:var(--success)"></div></div><span class="text-xs">${d.rate}%</span></div></td>
+          <td><span class="risk-badge risk-${d.risk}">${d.risk.charAt(0).toUpperCase()+d.risk.slice(1)}</span></td>
+          <td><span style="font-family:var(--font-mono);font-size:0.875rem;color:${riskColor};font-weight:700">${d.score}</span></td>
+          <td><span class="trend-pill trend-up">↑ +2.4%</span></td>
+        </tr>`;
+      }).join('');
+    }
+
+    // 4. Update Chart.js datasets
+    if (trendChart) {
+      trendChart.data.datasets[0].data = chartData.monthlyTrends.total;
+      trendChart.data.datasets[1].data = chartData.monthlyTrends.solved;
+      trendChart.update();
+    }
+
+    if (donutChart) {
+      const catCounts = KSPData.crimeCategories.map(cat => metrics.categoryCounts[cat.id] || 0);
+      donutChart.data.datasets[0].data = catCounts;
+      donutChart.update();
+    }
+
+    if (districtBarChart) {
+      const distScores = KSPDatabase.districts.slice(0, 8).map(d => metrics.districtCounts[d.name] || 0);
+      districtBarChart.data.datasets[0].data = distScores;
+      districtBarChart.update();
+    }
+
+    if (timeChart) {
+      timeChart.data.datasets[0].data = chartData.timeOfDay.data;
+      timeChart.update();
+    }
+  }
+
+  // Hook filters to reload analytics
+  window.addEventListener('ksp_filter_change', updateAnalyticsData);
+  window.addEventListener('ksp_db_update', updateAnalyticsData);
+
+  // Initial load
+  updateAnalyticsData();
+
+  // Tab switcher
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.tabs').querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const text = btn.textContent.trim();
+      const timeframeMap = { 'All': 'all', 'Cyber': 'cyber', 'Theft': 'theft' };
+      if (timeframeMap[text]) {
+        KSPFilterEngine.setFilter('crimeType', timeframeMap[text]);
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

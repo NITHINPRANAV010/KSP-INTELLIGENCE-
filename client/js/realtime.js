@@ -111,7 +111,7 @@ const KSPRealtime = (() => {
     }
 
     // Display a global toast notification
-    if (window.showToast && !window.KSP_NOTIFICATIONS_MUTED && !document.getElementById('ksp-copilot-panel')?.classList.contains('open')) {
+    if (window.showToast) {
       showToast(`NEW ALERT: ${tmpl.type} in ${district} (${station})`, tmpl.priority, 4000);
     }
   }

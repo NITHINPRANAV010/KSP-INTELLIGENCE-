@@ -1,0 +1,502 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crime Cascade Simulation â€” KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <style>
+    .cascade-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: var(--space-lg);
+      height: calc(100vh - var(--topnav-height) - 140px);
+    }
+    @media(max-width:1024px){ .cascade-layout{grid-template-columns:1fr} .cascade-controls{display:none} }
+    .cascade-map-wrap {
+      border-radius: var(--radius-lg); overflow: hidden;
+      border: 1px solid var(--border); position: relative;
+      background: #0a0f1e;
+    }
+    .cascade-controls {
+      display: flex; flex-direction: column; gap: var(--space-md); overflow-y: auto;
+    }
+
+    /* Timeline scrubber */
+    .time-scrubber {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000;
+      background: linear-gradient(0deg, rgba(5,10,20,0.97) 0%, rgba(5,10,20,0.7) 100%);
+      padding: 16px 20px;
+      backdrop-filter: blur(8px);
+    }
+    .time-steps {
+      display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .time-step-btn {
+      flex: 1; min-width: 60px; padding: 8px 4px; border-radius: var(--radius-md);
+      font-size: 0.7rem; font-weight: 700; text-align: center;
+      border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+      color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+    }
+    .time-step-btn.active {
+      background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5);
+      color: var(--critical);
+    }
+    .time-step-btn:hover:not(.active) {
+      background: rgba(255,255,255,0.08); color: var(--text-primary);
+    }
+    .scrubber-range {
+      width: 100%; accent-color: var(--critical); margin-bottom: 6px;
+    }
+    .scrubber-info {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .play-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4);
+      color: var(--critical); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .play-btn:hover { background: rgba(239,68,68,0.3); }
+
+    /* Map overlays */
+    .map-stats-bar {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    }
+    .map-stat-pill {
+      background: rgba(5,10,20,0.88); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 99px; padding: 6px 14px; font-size: 0.75rem; font-weight: 600;
+      display: flex; align-items: center; gap: 6px; backdrop-filter: blur(10px);
+    }
+    .cascade-day-badge {
+      position: absolute; top: 16px; left: 16px; z-index: 1000;
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4);
+      border-radius: var(--radius-md); padding: 8px 14px;
+      font-size: 0.875rem; font-weight: 800; color: var(--critical);
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+    }
+    .no-intervention-badge {
+      position: absolute; top: 16px; right: 16px; z-index: 1000;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius-md); padding: 6px 12px;
+      font-size: 0.7rem; font-weight: 700; color: var(--warning);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Prediction bar charts */
+    .pred-bar-row {
+      display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    }
+    .pred-bar-label { font-size: 0.75rem; color:var(--text-secondary); width:60px; flex-shrink:0; }
+    .pred-bar-track { flex:1; height:8px; border-radius:99px; background:var(--bg-tertiary); overflow:hidden; }
+    .pred-bar-fill { height:100%; border-radius:99px; transition:width 0.8s ease; }
+    .pred-bar-val { font-size:0.75rem;font-weight:700; width:36px; text-align:right; flex-shrink:0; }
+
+    .intervention-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: var(--radius-md);
+      border: 1px solid var(--border); margin-bottom: 6px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .intervention-item:hover { background:rgba(255,255,255,0.03); border-color:rgba(255,255,255,0.12); }
+    .intervention-item input[type=checkbox] { accent-color:var(--accent-blue); width:14px;height:14px; cursor:pointer; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <a class="nav-item" href="serial-crimes.html"><span class="nav-icon"><i data-lucide="link-2"></i></span><span class="nav-label">Serial Crimes</span></a>
+      <a class="nav-item" href="digital-footprint.html"><span class="nav-icon"><i data-lucide="fingerprint"></i></span><span class="nav-label">Digital Footprint</span></a>
+      <div class="nav-section-label">Command</div>
+      <a class="nav-item" href="commander.html"><span class="nav-icon"><i data-lucide="shield-alert"></i></span><span class="nav-label">Commander Briefing</span></a>
+      <a class="nav-item" href="resource-ai.html"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Resource AI</span></a>
+      <a class="nav-item" href="case-priority.html"><span class="nav-icon"><i data-lucide="list-ordered"></i></span><span class="nav-label">Case Priority AI</span></a>
+      <a class="nav-item active" href="cascade.html"><span class="nav-icon"><i data-lucide="activity"></i></span><span class="nav-label">Crime Cascade</span></a>
+      <a class="nav-item" href="event-monitor.html"><span class="nav-icon"><i data-lucide="calendar-days"></i></span><span class="nav-label">Event Monitor</span></a>
+      <a class="nav-item" href="scenario.html"><span class="nav-icon"><i data-lucide="flask-conical"></i></span><span class="nav-label">AI Scenario Sim</span></a>
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" style="width:16px;height:16px"></i><span style="font-size:0.75rem">Collapse</span></button>
+    </div>
+  </aside>
+
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">Crime Cascade Simulation <span>/ Predictive Spread Analysis</span></div>
+    <div class="topnav-actions">
+      <div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--success)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulseDot 1.5s ease infinite"></div>LIVE
+      </div>
+      <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
+      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP Â· Bengaluru Urban</span></div></div>
+    </div>
+  </header>
+
+  <main class="main-content page-content">
+    <!-- Demo bar -->
+    <div style="background:linear-gradient(90deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.25);border-radius:var(--radius-md);padding:10px 16px;display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md);flex-wrap:wrap">
+      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;white-space:nowrap;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
+      <a href="../index.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">1 Dashboard</a>
+      <a href="serial-crimes.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">2 Serial Crimes</a>
+      <a href="commander.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">3 Commander</a>
+      <a href="cascade.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.4);color:var(--text-primary);text-decoration:none">4 ðŸŒŠ Cascade</a>
+      <a href="scenario.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">5 Scenario</a>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1 class="page-header-title"><i data-lucide="activity" style="width:24px;height:24px;color:var(--critical)"></i> Crime Cascade Simulation</h1>
+        <p class="page-header-sub">Animated Hotspot Expansion Forecast â€” If No Intervention Occurs</p>
+      </div>
+      <div style="display:flex;gap:var(--space-sm)">
+        <button class="btn btn-ghost" onclick="resetSim()"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Reset</button>
+        <button class="btn btn-primary" id="play-all-btn" onclick="playAll()"><i data-lucide="play" style="width:14px;height:14px"></i> Play Animation</button>
+      </div>
+    </div>
+
+    <!-- KPI row -->
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-md);margin-bottom:var(--space-lg)">
+      <div class="card card-sm" style="text-align:center;border-top:2px solid var(--success)">
+        <div style="font-size:1.5rem;font-weight:900;color:var(--success)" id="today-incidents">247</div>
+        <div style="font-size:0.65rem;color:var(--text-muted)">TODAY (ACTUAL)</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-top:2px solid var(--warning)">
+        <div style="font-size:1.5rem;font-weight:900;color:var(--warning)" id="tmr-incidents">318</div>
+        <div style="font-size:0.65rem;color:var(--text-muted)">TOMORROW (+29%)</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-top:2px solid #f59e0b">
+        <div style="font-size:1.5rem;font-weight:900;color:#f59e0b" id="d3-incidents">412</div>
+        <div style="font-size:0.65rem;color:var(--text-muted)">DAY 3 (+67%)</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-top:2px solid #ef4444">
+        <div style="font-size:1.5rem;font-weight:900;color:#ef4444" id="d7-incidents">587</div>
+        <div style="font-size:0.65rem;color:var(--text-muted)">DAY 7 (+138%)</div>
+      </div>
+      <div class="card card-sm" style="text-align:center;border-top:2px solid #dc2626">
+        <div style="font-size:1.5rem;font-weight:900;color:#dc2626" id="d30-incidents">1,243</div>
+        <div style="font-size:0.65rem;color:var(--text-muted)">DAY 30 (+403%)</div>
+      </div>
+    </div>
+
+    <div class="cascade-layout">
+      <!-- LEFT: Controls -->
+      <div class="cascade-controls">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i data-lucide="sliders-horizontal" style="width:14px;height:14px;color:var(--accent-blue)"></i> Simulation Controls</div></div>
+          <div class="card-body">
+            <div style="margin-bottom:var(--space-md)">
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:600">Crime Type</div>
+              <select class="form-control" id="crime-type-select" style="font-size:0.8rem" onchange="updateSim()">
+                <option value="all">All Crime Types</option>
+                <option value="theft">Theft & Burglary</option>
+                <option value="gang">Gang Violence</option>
+                <option value="vehicle">Vehicle Crime</option>
+                <option value="fraud">Cyber Fraud</option>
+              </select>
+            </div>
+            <div style="margin-bottom:var(--space-md)">
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:600">District Focus</div>
+              <select class="form-control" id="district-select" style="font-size:0.8rem" onchange="updateSim()">
+                <option value="all">All Karnataka</option>
+                <option value="bengaluru">Bengaluru Urban</option>
+                <option value="bidar">Bidar</option>
+                <option value="mysuru">Mysuru</option>
+              </select>
+            </div>
+            <div style="margin-bottom:var(--space-md)">
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:600">Spread Factor: <span id="spread-val" style="color:var(--critical);font-weight:800">1.3x</span></div>
+              <input type="range" class="slider-range" min="1" max="2" step="0.1" value="1.3" id="spread-slider" oninput="document.getElementById('spread-val').textContent=this.value+'x';updateSim()" style="width:100%;accent-color:var(--critical)">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i data-lucide="trending-up" style="width:14px;height:14px;color:var(--warning)"></i> Predicted Incident Growth</div></div>
+          <div class="card-body">
+            <div class="pred-bar-row"><div class="pred-bar-label">Today</div><div class="pred-bar-track"><div class="pred-bar-fill" style="width:20%;background:var(--success)"></div></div><div class="pred-bar-val" style="color:var(--success)">247</div></div>
+            <div class="pred-bar-row"><div class="pred-bar-label">D+1</div><div class="pred-bar-track"><div class="pred-bar-fill" style="width:26%;background:var(--warning)"></div></div><div class="pred-bar-val" style="color:var(--warning)">318</div></div>
+            <div class="pred-bar-row"><div class="pred-bar-label">D+3</div><div class="pred-bar-track"><div class="pred-bar-fill" style="width:33%;background:#f59e0b"></div></div><div class="pred-bar-val" style="color:#f59e0b">412</div></div>
+            <div class="pred-bar-row"><div class="pred-bar-label">D+7</div><div class="pred-bar-track"><div class="pred-bar-fill" style="width:47%;background:var(--critical)"></div></div><div class="pred-bar-val" style="color:var(--critical)">587</div></div>
+            <div class="pred-bar-row"><div class="pred-bar-label">D+30</div><div class="pred-bar-track"><div class="pred-bar-fill" style="width:100%;background:#dc2626"></div></div><div class="pred-bar-val" style="color:#dc2626">1243</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i data-lucide="shield-check" style="width:14px;height:14px;color:var(--success)"></i> Apply Interventions</div></div>
+          <div class="card-body">
+            <div class="intervention-item">
+              <input type="checkbox" id="int-patrol" onchange="applyInterventions()">
+              <div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary)">Increase Patrols</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Reduces spread by 28%</div>
+              </div>
+            </div>
+            <div class="intervention-item">
+              <input type="checkbox" id="int-cctv" onchange="applyInterventions()">
+              <div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary)">Install CCTV</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Reduces spread by 18%</div>
+              </div>
+            </div>
+            <div class="intervention-item">
+              <input type="checkbox" id="int-arrest" onchange="applyInterventions()">
+              <div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary)">Arrest Key Suspects</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Reduces spread by 35%</div>
+              </div>
+            </div>
+            <div class="intervention-item">
+              <input type="checkbox" id="int-checkpoint" onchange="applyInterventions()">
+              <div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary)">Deploy Checkpoints</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Reduces spread by 22%</div>
+              </div>
+            </div>
+            <div id="intervention-result" style="display:none;margin-top:var(--space-sm);background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:var(--radius-md);padding:10px;font-size:0.8rem;color:var(--success)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Map -->
+      <div class="cascade-map-wrap">
+        <div id="cascade-map" style="width:100%;height:100%"></div>
+
+        <div class="cascade-day-badge" id="day-badge">ðŸ“… TODAY â€” CURRENT STATUS</div>
+        <div class="no-intervention-badge">âš ï¸ NO INTERVENTION SCENARIO</div>
+
+        <div class="map-stats-bar">
+          <div class="map-stat-pill"><span style="color:var(--critical)">â—</span> <span id="stat-incidents">247 Incidents</span></div>
+          <div class="map-stat-pill"><span style="color:var(--warning)">â—</span> <span id="stat-hotspots">8 Hotspots</span></div>
+          <div class="map-stat-pill"><span style="color:var(--accent-blue)">â—</span> <span id="stat-spread">Spread: Normal</span></div>
+        </div>
+
+        <div class="time-scrubber">
+          <div class="time-steps">
+            <button class="time-step-btn active" onclick="setDay('today',this)">Today</button>
+            <button class="time-step-btn" onclick="setDay('1',this)">+1 Day</button>
+            <button class="time-step-btn" onclick="setDay('3',this)">+3 Days</button>
+            <button class="time-step-btn" onclick="setDay('7',this)">+7 Days</button>
+            <button class="time-step-btn" onclick="setDay('30',this)">+30 Days</button>
+          </div>
+          <div class="scrubber-info">
+            <div style="font-size:0.7rem;color:var(--text-muted)">Drag to simulate time</div>
+            <button class="play-btn" id="anim-play-btn" onclick="toggleAnimation()">
+              <i data-lucide="play" style="width:14px;height:14px" id="play-icon"></i>
+            </button>
+            <div style="font-size:0.7rem;color:var(--text-muted)" id="sim-time-label">Step: Today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+  function updateTime(){const el=document.getElementById('topnav-time');if(el)el.textContent=new Date().toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});}
+  updateTime();setInterval(updateTime,1000);
+  document.getElementById('sidebar-toggle')?.addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('collapsed'));
+
+  // Heatmap data per day
+  const BASE_CENTER = [12.97, 77.59];
+  const cascadeData = {
+    today: {
+      label:'TODAY â€” CURRENT STATUS',
+      incidents:247, hotspots:8, spread:'Normal',
+      points:[
+        [12.920,77.590,1.0],[12.978,77.602,0.9],[12.985,77.572,0.8],
+        [12.960,77.623,0.7],[12.935,77.598,0.8],[12.995,77.563,0.6],
+        [13.010,77.545,0.7],[12.905,77.608,0.6],[12.950,77.640,0.5],
+        [12.975,77.580,0.7],[12.930,77.575,0.8]
+      ]
+    },
+    '1': {
+      label:'+1 DAY â€” PREDICTED SPREAD',
+      incidents:318, hotspots:12, spread:'Expanding',
+      points:[
+        [12.920,77.590,1.0],[12.978,77.602,0.9],[12.985,77.572,0.9],
+        [12.960,77.623,0.8],[12.935,77.598,0.9],[12.995,77.563,0.7],
+        [13.010,77.545,0.8],[12.905,77.608,0.7],[12.950,77.640,0.6],
+        [12.975,77.580,0.8],[12.930,77.575,0.9],[12.945,77.610,0.7],
+        [12.965,77.556,0.6],[12.980,77.618,0.7],[12.915,77.582,0.6]
+      ]
+    },
+    '3': {
+      label:'+3 DAYS â€” ACCELERATED SPREAD',
+      incidents:412, hotspots:17, spread:'HIGH',
+      points:[
+        [12.920,77.590,1.0],[12.978,77.602,1.0],[12.985,77.572,0.9],
+        [12.960,77.623,0.9],[12.935,77.598,1.0],[12.995,77.563,0.8],
+        [13.010,77.545,0.9],[12.905,77.608,0.8],[12.950,77.640,0.7],
+        [12.975,77.580,0.9],[12.930,77.575,1.0],[12.945,77.610,0.8],
+        [12.965,77.556,0.8],[12.980,77.618,0.8],[12.915,77.582,0.7],
+        [12.900,77.620,0.7],[13.025,77.530,0.6],[12.890,77.595,0.6],
+        [12.952,77.650,0.6],[13.000,77.590,0.7]
+      ]
+    },
+    '7': {
+      label:'+7 DAYS â€” CRISIS LEVEL',
+      incidents:587, hotspots:25, spread:'CRITICAL',
+      points:[
+        [12.920,77.590,1.0],[12.978,77.602,1.0],[12.985,77.572,1.0],
+        [12.960,77.623,1.0],[12.935,77.598,1.0],[12.995,77.563,0.9],
+        [13.010,77.545,1.0],[12.905,77.608,0.9],[12.950,77.640,0.9],
+        [12.975,77.580,1.0],[12.930,77.575,1.0],[12.945,77.610,0.9],
+        [12.965,77.556,0.9],[12.980,77.618,0.9],[12.915,77.582,0.9],
+        [12.900,77.620,0.8],[13.025,77.530,0.8],[12.890,77.595,0.8],
+        [12.952,77.650,0.8],[13.000,77.590,0.9],[12.870,77.610,0.7],
+        [13.040,77.520,0.7],[12.855,77.580,0.7],[12.945,77.670,0.6]
+      ]
+    },
+    '30': {
+      label:'+30 DAYS â€” STATEWIDE CRISIS',
+      incidents:1243, hotspots:47, spread:'EXTREME',
+      points:[
+        [12.920,77.590,1.0],[12.978,77.602,1.0],[12.985,77.572,1.0],
+        [12.960,77.623,1.0],[12.935,77.598,1.0],[12.995,77.563,1.0],
+        [13.010,77.545,1.0],[12.905,77.608,1.0],[12.950,77.640,1.0],
+        [12.975,77.580,1.0],[12.930,77.575,1.0],[12.945,77.610,1.0],
+        [12.965,77.556,1.0],[12.980,77.618,1.0],[12.915,77.582,1.0],
+        [12.900,77.620,0.9],[13.025,77.530,0.9],[12.890,77.595,0.9],
+        [12.952,77.650,0.9],[13.000,77.590,0.9],[12.870,77.610,0.9],
+        [13.040,77.520,0.9],[12.855,77.580,0.8],[12.945,77.670,0.8],
+        [12.830,77.600,0.8],[13.060,77.500,0.8],[12.820,77.560,0.7],
+        [12.960,77.700,0.7],[13.070,77.540,0.7],[12.800,77.590,0.7],
+        [12.840,77.630,0.7],[12.990,77.480,0.7],[13.080,77.580,0.6]
+      ]
+    }
+  };
+
+  let map = null;
+  let heatLayer = null;
+  let currentDay = 'today';
+  let animTimer = null;
+  let isPlaying = false;
+
+  function initMap() {
+    map = L.map('cascade-map',{zoomControl:false}).setView(BASE_CENTER,12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'Â© CartoDB',maxZoom:19}).addTo(map);
+    L.control.zoom({position:'bottomright'}).addTo(map);
+    renderDay('today');
+  }
+
+  function renderDay(day) {
+    const d = cascadeData[day];
+    if(!d) return;
+    if(heatLayer) { map.removeLayer(heatLayer); heatLayer=null; }
+    
+    const gradient = day==='today'?{'0.4':'#22c55e','0.65':'#f59e0b','1':'#ef4444'}
+      :day==='1'?{'0.4':'#f59e0b','0.65':'#ef4444','1':'#dc2626'}
+      :{'0.4':'#ef4444','0.65':'#dc2626','1':'#7f1d1d'};
+    
+    heatLayer = L.heatLayer(d.points, {radius:40,blur:25,gradient}).addTo(map);
+    
+    document.getElementById('day-badge').textContent = 'ðŸ“… ' + d.label;
+    document.getElementById('stat-incidents').textContent = d.incidents + ' Incidents';
+    document.getElementById('stat-hotspots').textContent = d.hotspots + ' Hotspots';
+    document.getElementById('stat-spread').textContent = 'Spread: ' + d.spread;
+    document.getElementById('sim-time-label').textContent = 'Step: ' + d.label.split('â€”')[0].trim();
+  }
+
+  function setDay(day, btn) {
+    currentDay = day;
+    document.querySelectorAll('.time-step-btn').forEach(b=>b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    renderDay(day);
+  }
+
+  const days = ['today','1','3','7','30'];
+  let dayIdx = 0;
+  function toggleAnimation() {
+    if(isPlaying) {
+      clearInterval(animTimer);
+      isPlaying = false;
+      document.getElementById('play-icon').setAttribute('data-lucide','play');
+      lucide.createIcons();
+    } else {
+      isPlaying = true;
+      document.getElementById('play-icon').setAttribute('data-lucide','pause');
+      lucide.createIcons();
+      dayIdx = 0;
+      animStep();
+      animTimer = setInterval(()=>{
+        dayIdx++;
+        if(dayIdx>=days.length) { clearInterval(animTimer); isPlaying=false; document.getElementById('play-icon').setAttribute('data-lucide','play');lucide.createIcons(); return; }
+        animStep();
+      }, 1500);
+    }
+  }
+
+  function animStep() {
+    const d = days[dayIdx];
+    const btns = document.querySelectorAll('.time-step-btn');
+    btns.forEach((b,i)=>b.classList.toggle('active',i===dayIdx));
+    renderDay(d);
+  }
+
+  function playAll() { toggleAnimation(); }
+  function resetSim() {
+    if(animTimer) clearInterval(animTimer);
+    isPlaying=false;
+    dayIdx=0;
+    document.getElementById('play-icon').setAttribute('data-lucide','play');
+    lucide.createIcons();
+    setDay('today', document.querySelectorAll('.time-step-btn')[0]);
+  }
+
+  function updateSim() { renderDay(currentDay); }
+
+  let reductionTotal = 0;
+  function applyInterventions() {
+    reductionTotal = 0;
+    if(document.getElementById('int-patrol').checked) reductionTotal+=28;
+    if(document.getElementById('int-cctv').checked) reductionTotal+=18;
+    if(document.getElementById('int-arrest').checked) reductionTotal+=35;
+    if(document.getElementById('int-checkpoint').checked) reductionTotal+=22;
+    reductionTotal = Math.min(reductionTotal, 75);
+    const r = document.getElementById('intervention-result');
+    if(reductionTotal>0) {
+      r.style.display='block';
+      r.innerHTML = `âœ… With selected interventions: estimated <strong>${reductionTotal}% crime reduction</strong>. Day 7 projection drops from 587 â†’ ${Math.round(587*(1-reductionTotal/100))} incidents.`;
+    } else {
+      r.style.display='none';
+    }
+  }
+
+  initMap();
+</script>
+
+<script src="../js/ai-intelligence-overlay.js"></script>
+</body>
+</html>
+
+
+

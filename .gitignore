@@ -48,3 +48,8 @@ scratch/
 .env.prod
 .env.local
 secrets/
+
+# Zoho Catalyst
+.catalyst/
+catalyst-debug.log
+functions/*/node_modules/
