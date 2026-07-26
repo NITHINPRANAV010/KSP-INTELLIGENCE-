@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resource Allocation AI â€” KSP Intelligence</title>
+  <title>Resource Allocation AI — KSP Intelligence</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/core.css">
@@ -13,55 +13,132 @@
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
-    .resource-grid { display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg); }
-    @media(max-width:1280px){ .resource-grid{grid-template-columns:1fr} }
-
-    .resource-category {
-      background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;
+    .resource-hero {
+      background: linear-gradient(135deg, rgba(34, 211, 238, 0.08), rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.08));
+      border: 1px solid rgba(34, 211, 238, 0.2);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      position: relative;
+      overflow: hidden;
     }
-    .res-cat-header {
-      padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--border);
-      display:flex;align-items:center;justify-content:space-between;
+    .resource-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
+      pointer-events: none;
     }
-    .res-cat-body { padding:var(--space-md); }
-
-    .resource-row {
-      display:flex;align-items:center;gap:var(--space-md);padding:10px 0;
-      border-bottom:1px solid rgba(255,255,255,0.04);
+    .kpi-stat-card {
+      background: rgba(10, 15, 30, 0.8);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+      transition: transform 0.2s, border-color 0.2s;
     }
-    .resource-row:last-child{border-bottom:none;}
-    .res-icon {
-      width:36px;height:36px;border-radius:var(--radius-md);
-      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    .kpi-stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(59, 130, 246, 0.4);
     }
-    .res-bar-track { flex:1;height:8px;border-radius:99px;background:var(--bg-tertiary);overflow:hidden; }
-    .res-bar-fill { height:100%;border-radius:99px;transition:width 0.8s ease; }
-    .res-change {
-      font-size:0.75rem;font-weight:800;width:60px;text-align:right;flex-shrink:0;
+    .resource-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-lg);
+      margin-bottom: var(--space-lg);
     }
-
-    .allocation-card {
-      background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md);
-      padding:var(--space-md);margin-bottom:var(--space-sm);
-      display:flex;align-items:flex-start;gap:var(--space-md);
+    @media (max-width: 1280px) {
+      .resource-grid-2col { grid-template-columns: 1fr; }
     }
-    .ai-explain-block {
-      background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);
-      border-radius:var(--radius-md);padding:var(--space-md);margin-top:var(--space-sm);
+    .category-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
     }
-    .decision-score-grid {
-      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:var(--space-md);
+    .category-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
     }
-    .ds-item {
-      text-align:center;padding:8px;background:rgba(255,255,255,0.02);
-      border:1px solid var(--border);border-radius:var(--radius-md);
+    .category-body {
+      padding: var(--space-md);
+    }
+    .alloc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .alloc-item:last-child { border-bottom: none; }
+    .alloc-name {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      width: 130px;
+      flex-shrink: 0;
+    }
+    .alloc-track {
+      flex: 1;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--bg-tertiary);
+      overflow: hidden;
+    }
+    .alloc-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .alloc-val {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      width: 70px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .alloc-delta {
+      font-size: 0.75rem;
+      font-weight: 800;
+      width: 60px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .explain-box {
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.15);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+    .matrix-control-panel {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      margin-bottom: var(--space-lg);
     }
   </style>
 </head>
 <body>
 <div class="app-shell">
+
+  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
-    <a class="sidebar-logo" href="../index.html"><div class="sidebar-logo-icon">KSP</div><div class="sidebar-logo-text"><span class="sidebar-logo-title">KSP Intelligence</span><span class="sidebar-logo-sub">Command Center</span></div></a>
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
     <nav class="sidebar-nav">
       <div class="nav-section-label">Main</div>
       <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
@@ -69,6 +146,7 @@
       <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
       <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
       <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
       <div class="nav-section-label">Investigation</div>
       <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
       <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
@@ -76,10 +154,12 @@
       <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
       <a class="nav-item" href="serial-crimes.html"><span class="nav-icon"><i data-lucide="link-2"></i></span><span class="nav-label">Serial Crimes</span></a>
       <a class="nav-item" href="digital-footprint.html"><span class="nav-icon"><i data-lucide="fingerprint"></i></span><span class="nav-label">Digital Footprint</span></a>
+
       <div class="nav-section-label">Command</div>
       <a class="nav-item" href="commander.html"><span class="nav-icon"><i data-lucide="shield-alert"></i></span><span class="nav-label">Commander Briefing</span></a>
       <a class="nav-item" href="scenario.html"><span class="nav-icon"><i data-lucide="flask-conical"></i></span><span class="nav-label">AI Scenario Sim</span></a>
       <a class="nav-item active" href="resource-ai.html"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Resource AI</span></a>
+
       <div class="nav-section-label">Management</div>
       <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
       <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
@@ -88,252 +168,353 @@
       <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
     </nav>
     <div class="sidebar-footer">
-      <button class="sidebar-toggle" id="sidebar-toggle"><i data-lucide="panel-left-close" style="width:16px;height:16px"></i><span style="font-size:0.75rem">Collapse</span></button>
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" style="width:16px;height:16px"></i>
+        <span style="font-size:0.75rem">Collapse</span>
+      </button>
     </div>
   </aside>
 
+  <!-- TOPBAR -->
   <header class="topnav" id="topnav">
-    <div class="topnav-page-title">Resource Allocation AI <span>/ Optimal Deployment Recommendations</span></div>
+    <div class="topnav-page-title">Resource Allocation AI <span>/ Dispatch & Budget Optimization Matrix</span></div>
     <div class="topnav-actions">
+      <div class="live-indicator" style="display:flex;align-items:center;gap:6px;font-size:0.75rem;color:var(--success)">
+        <div style="width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulseDot 1.5s ease infinite"></div>
+        <span>LIVE BACKEND SYNC</span>
+      </div>
       <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
-      <div class="topnav-profile"><div class="profile-avatar">DCP</div><div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP Â· Bengaluru Urban</span></div></div>
+      <button class="btn btn-primary" onclick="dispatchOrders()" style="display:flex;align-items:center;gap:8px;font-size:0.8rem">
+        <i data-lucide="send" style="width:14px;height:14px"></i>
+        Dispatch Orders
+      </button>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
     </div>
   </header>
 
+  <!-- MAIN CONTENT -->
   <main class="main-content page-content">
-    <div style="background:linear-gradient(90deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.25);border-radius:var(--radius-md);padding:10px 16px;display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md);flex-wrap:wrap">
-      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
-      <a href="../index.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">Dashboard</a>
-      <a href="commander.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">Commander</a>
-      <a href="resource-ai.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.4);color:var(--text-primary);text-decoration:none">ðŸ“¦ Resource AI</a>
-      <a href="scenario.html" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:var(--text-secondary);text-decoration:none">Scenario Sim</a>
-    </div>
-
-    <div class="page-header">
-      <div class="page-header-left">
-        <h1 class="page-header-title"><i data-lucide="package" style="width:24px;height:24px;color:var(--accent-blue)"></i> Resource Allocation AI</h1>
-        <p class="page-header-sub">AI-Recommended Optimal Allocation of Police Personnel, Vehicles, Forensic & Cyber Teams</p>
-      </div>
-      <div style="display:flex;gap:var(--space-sm)">
-        <button class="btn btn-ghost" onclick="recalculate()"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Recalculate</button>
-        <button class="btn btn-primary" onclick="applyAll()"><i data-lucide="check" style="width:14px;height:14px"></i> Apply All</button>
-      </div>
-    </div>
-
-    <!-- Budget Overview -->
-    <div class="card stagger-item" style="margin-bottom:var(--space-lg);border-left:3px solid var(--accent-blue)">
-      <div class="card-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-md)">
-        <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--text-primary)" id="monthly-budget-val">₹48.6Cr</div>
-          <div style="font-size:0.65rem;color:var(--text-muted)">MONTHLY BUDGET</div>
+    
+    <!-- Hero Header & Global Overview -->
+    <div class="resource-hero stagger-item">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-md);flex-wrap:wrap;gap:var(--space-sm)">
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:900;color:var(--text-primary);display:flex;align-items:center;gap:10px">
+            <i data-lucide="package-check" style="width:28px;height:28px;color:var(--accent-cyan)"></i>
+            AI Police Resource & Dispatch Matrix
+          </h1>
+          <p style="font-size:0.8125rem;color:var(--text-secondary);margin-top:4px">
+            Real-time optimization engine distributing officers, patrol squad vehicles, cyber cells, and drone units across all 30 Karnataka districts.
+          </p>
         </div>
-        <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--success)" id="current-spend-val">₹41.2Cr</div>
-          <div style="font-size:0.65rem;color:var(--text-muted)">CURRENT SPEND</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--accent-blue)" id="available-val">₹7.4Cr</div>
-          <div style="font-size:0.65rem;color:var(--text-muted)">AVAILABLE</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--warning)" id="efficiency-score-val">89%</div>
-          <div style="font-size:0.65rem;color:var(--text-muted)">EFFICIENCY SCORE</div>
-        </div>
-        <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--success)" id="reduction-potential-val">+23%</div>
-          <div style="font-size:0.65rem;color:var(--text-muted)">CRIME REDUCTION POTENTIAL</div>
+        <div style="display:flex;gap:var(--space-sm)">
+          <button class="btn btn-ghost" onclick="recalculateAllocations()">
+            <i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Recalculate Matrix
+          </button>
+          <button class="btn btn-primary" onclick="applyAll()">
+            <i data-lucide="check-circle" style="width:14px;height:14px"></i> Approve Deployment
+          </button>
         </div>
       </div>
+
+      <!-- KPI Executive Metrics -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-md)">
+        <div class="kpi-stat-card">
+          <div style="font-size:1.5rem;font-weight:900;color:var(--text-primary)" id="kpi-budget">₹48.6Cr</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;margin-top:4px">MONTHLY BUDGET</div>
+        </div>
+        <div class="kpi-stat-card">
+          <div style="font-size:1.5rem;font-weight:900;color:var(--success)" id="kpi-spend">₹41.2Cr</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;margin-top:4px">OPTIMIZED SPEND</div>
+        </div>
+        <div class="kpi-stat-card">
+          <div style="font-size:1.5rem;font-weight:900;color:var(--accent-cyan)" id="kpi-savings">₹7.4Cr</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;margin-top:4px">SAVINGS (15.2%)</div>
+        </div>
+        <div class="kpi-stat-card">
+          <div style="font-size:1.5rem;font-weight:900;color:var(--warning)" id="kpi-efficiency">94.8%</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;margin-top:4px">EFFICIENCY SCORE</div>
+        </div>
+        <div class="kpi-stat-card">
+          <div style="font-size:1.5rem;font-weight:900;color:#a78bfa" id="kpi-reduction">+28.5%</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);font-weight:700;margin-top:4px">CRIME DETERRENCE</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Main AI Recommendation -->
-    <div class="card stagger-item" style="margin-bottom:var(--space-lg);border:1px solid rgba(139,92,246,0.25);background:linear-gradient(135deg,rgba(139,92,246,0.06),rgba(59,130,246,0.04))">
+    <!-- AI Strategic Rationale -->
+    <div class="card stagger-item" style="margin-bottom:var(--space-lg);border:1px solid rgba(139,92,246,0.3);background:linear-gradient(135deg,rgba(139,92,246,0.06),rgba(34,211,238,0.04))">
       <div class="card-header">
-        <div class="card-title"><i data-lucide="sparkles" style="width:16px;height:16px;color:#a78bfa"></i> AI Strategic Recommendation</div>
-        <span class="badge" style="background:rgba(139,92,246,0.2);color:#a78bfa;border:1px solid rgba(139,92,246,0.3)">CONFIDENCE: 91%</span>
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          <i data-lucide="sparkles" style="width:18px;height:18px;color:#a78bfa"></i>
+          AI Tactical Dispatch Rationale
+        </div>
+        <span class="badge" style="background:rgba(139,92,246,0.2);color:#a78bfa;border:1px solid rgba(139,92,246,0.4)">MODEL CONFIDENCE: 94.8%</span>
       </div>
       <div class="card-body">
         <p style="font-size:0.875rem;line-height:1.8;color:var(--text-primary)">
-          Based on current crime patterns, resource availability, and predictive models, the AI recommends a <strong>tactical reallocation of 23% of patrol resources from low-risk to high-risk zones</strong>. 
-          Priority deployment to <strong>Bengaluru Urban, Bidar, and Mysuru</strong> districts is critical today due to festival activity, gang surge, and serial crime patterns.
-          <br><br>
-          Estimated outcome: <strong>23% reduction in predicted crime incidents</strong> over next 7 days with projected savings of â‚¹2.1Cr in investigation costs.
+          The AI Dispatch Matrix has analyzed <strong>10,250+ live crime records</strong> and current officer activity across all 30 districts. To maximize public safety, the model recommends shifting <strong>23% of patrol resources</strong> from low-risk areas into high-threat corridors:
+          <br>
+          • <strong>Mysuru District</strong>: Reallocate <strong>+200 Officers & +12 Vehicles</strong> to manage Dasara festival crowds (expected footfall: 80,000+).
+          <br>
+          • <strong>Bidar District</strong>: Deploy <strong>+80 Officers & +6 Patrol Vehicles</strong> to contain gang surge near NH-65.
+          <br>
+          • <strong>Tumkuru District</strong>: Deploy <strong>+2 Cyber Fraud Response Teams</strong> to trace active UPI scam network.
         </p>
-        <div class="decision-score-grid">
-          <div class="ds-item"><div style="font-size:1.25rem;font-weight:900;color:var(--critical)">HIGH</div><div style="font-size:0.65rem;color:var(--text-muted)">IMPACT</div></div>
-          <div class="ds-item"><div style="font-size:1.25rem;font-weight:900;color:var(--warning)">URGENT</div><div style="font-size:0.65rem;color:var(--text-muted)">URGENCY</div></div>
-          <div class="ds-item"><div style="font-size:1.25rem;font-weight:900;color:var(--accent-blue)">91%</div><div style="font-size:0.65rem;color:var(--text-muted)">CONFIDENCE</div></div>
-          <div class="ds-item"><div style="font-size:1.25rem;font-weight:900;color:#a78bfa">460</div><div style="font-size:0.65rem;color:var(--text-muted)">OFFICERS NEEDED</div></div>
-          <div class="ds-item"><div style="font-size:1.25rem;font-weight:900;color:var(--success)">7 Days</div><div style="font-size:0.65rem;color:var(--text-muted)">IMPACT WINDOW</div></div>
-          <div class="ds-item"><div style="font-size:1.25rem;font-weight:900;color:var(--success)">23%</div><div style="font-size:0.65rem;color:var(--text-muted)">CRIME REDUCTION</div></div>
-        </div>
       </div>
     </div>
 
-    <div class="resource-grid stagger-item">
+    <!-- Charts Row -->
+    <div class="resource-grid-2col stagger-item">
+      
+      <!-- Chart 1: Personnel Allocation by District -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="bar-chart-3" style="width:16px;height:16px;color:var(--accent-blue)"></i> Current vs. AI-Recommended Personnel</div>
+        </div>
+        <div class="card-body" style="height:260px">
+          <canvas id="personnel-chart"></canvas>
+        </div>
+      </div>
 
-      <!-- Patrol Vehicles -->
-      <div class="resource-category">
-        <div class="res-cat-header">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="res-icon" style="background:rgba(59,130,246,0.1)"><i data-lucide="car" style="width:18px;height:18px;color:var(--accent-blue)"></i></div>
-            <div><div style="font-weight:700;font-size:0.875rem">Patrol Vehicles</div><div style="font-size:0.7rem;color:var(--text-muted)">218 deployed / 247 total</div></div>
+      <!-- Chart 2: Budget Distribution Doughnut -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><i data-lucide="pie-chart" style="width:16px;height:16px;color:var(--accent-cyan)"></i> Budget Allocation Distribution</div>
+        </div>
+        <div class="card-body" style="display:grid;grid-template-columns:1fr 220px;gap:var(--space-md);align-items:center;height:260px">
+          <canvas id="budget-chart" height="220"></canvas>
+          <div id="budget-legend"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4 Detailed Category Grids -->
+    <div class="resource-grid-2col stagger-item">
+
+      <!-- Category 1: Patrol Vehicles -->
+      <div class="category-card">
+        <div class="category-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:var(--radius-md);background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center">
+              <i data-lucide="car" style="width:20px;height:20px;color:var(--accent-blue)"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Patrol Squad Vehicles</div>
+              <div style="font-size:0.7rem;color:var(--text-muted)">218 Active Units / 247 Fleet Capacity</div>
+            </div>
           </div>
           <span class="badge badge-info">AI OPTIMIZED</span>
         </div>
-        <div class="res-cat-body">
+        <div class="category-body">
           <div id="vehicle-allocs"></div>
-          <div class="ai-explain-block">
-            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">ðŸ¤– WHY</div>
-            <div style="font-size:0.8rem;color:var(--text-muted)">Bengaluru Urban gets +8 vehicles due to 89 incidents today (+32% normal). Mysuru gets +12 for Dasara festival. Bidar gets +6 for gang alert. Remove 4 from Kodagu (lowest risk today).</div>
+          <div class="explain-box">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">🤖 AI DISPATCH REASONING</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">Bengaluru Urban assigned +8 vehicles due to 32% theft surge. Mysuru assigned +12 units for festival security. Kodagu reduced by 4 units (lowest risk profile today).</div>
           </div>
         </div>
       </div>
 
-      <!-- Police Personnel -->
-      <div class="resource-category">
-        <div class="res-cat-header">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="res-icon" style="background:rgba(139,92,246,0.1)"><i data-lucide="users" style="width:18px;height:18px;color:#a78bfa"></i></div>
-            <div><div style="font-weight:700;font-size:0.875rem">Police Personnel</div><div style="font-size:0.7rem;color:var(--text-muted)">8,420 deployed / 10,000 total</div></div>
+      <!-- Category 2: Police Officers -->
+      <div class="category-card">
+        <div class="category-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:var(--radius-md);background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center">
+              <i data-lucide="users" style="width:20px;height:20px;color:#a78bfa"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Police Personnel</div>
+              <div style="font-size:0.7rem;color:var(--text-muted)">8,420 Active Personnel / 10,000 Total Force</div>
+            </div>
           </div>
-          <span class="badge badge-warning">REDEPLOYMENT NEEDED</span>
+          <span class="badge badge-warning">REDEPLOYMENT ACTIVE</span>
         </div>
-        <div class="res-cat-body">
+        <div class="category-body">
           <div id="personnel-allocs"></div>
-          <div class="ai-explain-block">
-            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">ðŸ¤– WHY</div>
-            <div style="font-size:0.8rem;color:var(--text-muted)">Festival security requires 200 additional officers in Mysuru. Gang alert requires immediate 80-person response in Bidar. Rally security needs 60 in Kalaburagi. KGF coverage gap needs 40.</div>
+          <div class="explain-box">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">🤖 AI DISPATCH REASONING</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">+200 officers transferred to Mysuru for event crowd control. +80 officers dispatched to Bidar for gang deterrence. Chikkamagaluru reduced by 40 officers.</div>
           </div>
         </div>
       </div>
 
-      <!-- Cyber Teams -->
-      <div class="resource-category">
-        <div class="res-cat-header">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="res-icon" style="background:rgba(34,211,238,0.1)"><i data-lucide="monitor" style="width:18px;height:18px;color:var(--accent-cyan)"></i></div>
-            <div><div style="font-weight:700;font-size:0.875rem">Cyber Crime Teams</div><div style="font-size:0.7rem;color:var(--text-muted)">12 teams / 8 districts</div></div>
+      <!-- Category 3: Cyber Response Cells -->
+      <div class="category-card">
+        <div class="category-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:var(--radius-md);background:rgba(34,211,238,0.15);display:flex;align-items:center;justify-content:center">
+              <i data-lucide="shield-check" style="width:20px;height:20px;color:var(--accent-cyan)"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Cyber Response Units</div>
+              <div style="font-size:0.7rem;color:var(--text-muted)">14 Specialized Cyber Squads</div>
+            </div>
           </div>
-          <span class="badge badge-info">EXPAND NEEDED</span>
+          <span class="badge badge-info">HIGH THREAT</span>
         </div>
-        <div class="res-cat-body">
+        <div class="category-body">
           <div id="cyber-allocs"></div>
-          <div class="ai-explain-block">
-            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">ðŸ¤– WHY</div>
-            <div style="font-size:0.8rem;color:var(--text-muted)">UPI fraud surge in Tumkuru requires 2 dedicated cyber teams. ATM skimming ring in Bengaluru needs 1 specialized technical team for device analysis and network forensics.</div>
+          <div class="explain-box">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">🤖 AI DISPATCH REASONING</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">Tumkuru assigned 2 dedicated cyber units to trace active phishing syndicate. Bengaluru Urban maintains 3 units for UPI fraud analysis.</div>
           </div>
         </div>
       </div>
 
-      <!-- Forensic Teams -->
-      <div class="resource-category">
-        <div class="res-cat-header">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="res-icon" style="background:rgba(34,197,94,0.1)"><i data-lucide="microscope" style="width:18px;height:18px;color:var(--success)"></i></div>
-            <div><div style="font-weight:700;font-size:0.875rem">Forensic & FSL Teams</div><div style="font-size:0.7rem;color:var(--text-muted)">8 teams statewide</div></div>
+      <!-- Category 4: Drone & Forensic Squads -->
+      <div class="category-card">
+        <div class="category-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;border-radius:var(--radius-md);background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center">
+              <i data-lucide="microscope" style="width:20px;height:20px;color:var(--success)"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:0.9rem">Forensic & Drone Units</div>
+              <div style="font-size:0.7rem;color:var(--text-muted)">10 Aerial Drones / 8 Forensic Units</div>
+            </div>
           </div>
           <span class="badge badge-success">OPTIMAL</span>
         </div>
-        <div class="res-cat-body">
+        <div class="category-body">
           <div id="forensic-allocs"></div>
-          <div class="ai-explain-block">
-            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">ðŸ¤– WHY</div>
-            <div style="font-size:0.8rem;color:var(--text-muted)">Chain-snatching cluster requires 1 FSL team for CCTV evidence analysis. Warehouse break-ins need tool mark analysis. Current allocation is near-optimal with minor adjustments recommended.</div>
+          <div class="explain-box">
+            <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:4px">🤖 AI DISPATCH REASONING</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">Serial chain-snatching cluster in South Bengaluru assigned 1 FSL team for video forensics. Belagavi border checkpoint assigned 2 aerial surveillance drones.</div>
           </div>
         </div>
       </div>
 
     </div>
 
-    <!-- Budget Chart -->
-    <div class="card stagger-item" style="margin-top:var(--space-lg)">
-      <div class="card-header"><div class="card-title"><i data-lucide="pie-chart" style="width:16px;height:16px;color:var(--accent-blue)"></i> Budget Allocation Overview</div></div>
-      <div class="card-body" style="display:grid;grid-template-columns:1fr 300px;gap:var(--space-lg);align-items:center">
-        <canvas id="budget-chart" height="220"></canvas>
-        <div id="budget-legend"></div>
-      </div>
-    </div>
   </main>
 </div>
 
+<!-- Floating AI Copilot Button -->
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
 <script>
   lucide.createIcons();
-  function updateTime(){const el=document.getElementById('topnav-time');if(el)el.textContent=new Date().toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',day:'2-digit',month:'short'});}
-  updateTime();setInterval(updateTime,1000);
-  document.getElementById('sidebar-toggle')?.addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('collapsed'));
 
+  // Clock
+  function updateTime() {
+    const el = document.getElementById('topnav-time');
+    if (el) el.textContent = new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short' });
+  }
+  updateTime(); setInterval(updateTime, 1000);
+
+  // Render Rows Function
   function renderAllocRows(containerId, rows) {
     const el = document.getElementById(containerId);
-    if(!el) return;
-    el.innerHTML = rows.map(r=>`
-      <div class="resource-row">
-        <div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);width:120px;flex-shrink:0">${r.district}</div>
-        <div class="res-bar-track"><div class="res-bar-fill" style="width:${r.pct}%;background:${r.color}"></div></div>
-        <div style="font-size:0.8rem;font-weight:700;width:60px;text-align:center;flex-shrink:0;color:var(--text-primary)">${r.current}</div>
-        <div class="res-change" style="color:${r.delta>0?'var(--critical)':r.delta<0?'var(--success)':'var(--text-muted)'}">${r.delta>0?'+':''}${r.delta}</div>
+    if (!el) return;
+    el.innerHTML = rows.map(r => `
+      <div class="alloc-item">
+        <div class="alloc-name">${r.district}</div>
+        <div class="alloc-track"><div class="alloc-fill" style="width:${r.pct}%;background:${r.color}"></div></div>
+        <div class="alloc-val">${r.current}</div>
+        <div class="alloc-delta" style="color:${r.delta > 0 ? 'var(--critical)' : r.delta < 0 ? 'var(--success)' : 'var(--text-muted)'}">
+          ${r.delta > 0 ? '+' : ''}${r.delta}
+        </div>
       </div>`).join('');
   }
 
-  renderAllocRows('vehicle-allocs',[
-    {district:'Bengaluru Urban',pct:78,current:'42',delta:8,color:'#ef4444'},
-    {district:'Mysuru',pct:65,current:'28',delta:12,color:'#f59e0b'},
-    {district:'Bidar',pct:60,current:'18',delta:6,color:'#ef4444'},
-    {district:'Kalaburagi',pct:50,current:'16',delta:4,color:'#f59e0b'},
-    {district:'Kodagu',pct:25,current:'8',delta:-4,color:'#22c55e'},
+  // Populate Data Grids
+  renderAllocRows('vehicle-allocs', [
+    { district: 'Bengaluru Urban', pct: 85, current: '42 Units', delta: 8, color: '#ef4444' },
+    { district: 'Mysuru', pct: 72, current: '28 Units', delta: 12, color: '#f59e0b' },
+    { district: 'Bidar', pct: 64, current: '18 Units', delta: 6, color: '#ef4444' },
+    { district: 'Kalaburagi', pct: 52, current: '16 Units', delta: 4, color: '#f59e0b' },
+    { district: 'Kodagu', pct: 28, current: '8 Units', delta: -4, color: '#22c55e' }
   ]);
 
-  renderAllocRows('personnel-allocs',[
-    {district:'Bengaluru Urban',pct:80,current:'2,140',delta:120,color:'#ef4444'},
-    {district:'Mysuru',pct:72,current:'980',delta:200,color:'#f59e0b'},
-    {district:'Bidar',pct:68,current:'640',delta:80,color:'#ef4444'},
-    {district:'Kalaburagi',pct:62,current:'580',delta:60,color:'#f59e0b'},
-    {district:'KGF Div.',pct:45,current:'320',delta:40,color:'#3b82f6'},
-    {district:'Chikkamagaluru',pct:30,current:'240',delta:-40,color:'#22c55e'},
+  renderAllocRows('personnel-allocs', [
+    { district: 'Bengaluru Urban', pct: 88, current: '2,140 Officers', delta: 120, color: '#ef4444' },
+    { district: 'Mysuru', pct: 76, current: '980 Officers', delta: 200, color: '#f59e0b' },
+    { district: 'Bidar', pct: 70, current: '640 Officers', delta: 80, color: '#ef4444' },
+    { district: 'Kalaburagi', pct: 64, current: '580 Officers', delta: 60, color: '#f59e0b' },
+    { district: 'Chikkamagaluru', pct: 32, current: '240 Officers', delta: -40, color: '#22c55e' }
   ]);
 
-  renderAllocRows('cyber-allocs',[
-    {district:'Bengaluru Urban',pct:75,current:'3 teams',delta:1,color:'#22d3ee'},
-    {district:'Tumkuru',pct:60,current:'2 teams',delta:2,color:'#22d3ee'},
-    {district:'Mysuru',pct:40,current:'1 team',delta:0,color:'#3b82f6'},
-    {district:'Other Districts',pct:20,current:'6 teams',delta:0,color:'#3b82f6'},
+  renderAllocRows('cyber-allocs', [
+    { district: 'Bengaluru Urban', pct: 80, current: '3 Teams', delta: 1, color: '#22d3ee' },
+    { district: 'Tumkuru', pct: 68, current: '2 Teams', delta: 2, color: '#22d3ee' },
+    { district: 'Mysuru', pct: 45, current: '1 Team', delta: 0, color: '#3b82f6' },
+    { district: 'Other Districts', pct: 25, current: '8 Teams', delta: 0, color: '#3b82f6' }
   ]);
 
-  renderAllocRows('forensic-allocs',[
-    {district:'Bengaluru Urban',pct:70,current:'2 teams',delta:1,color:'#22c55e'},
-    {district:'Bidar',pct:50,current:'1 team',delta:0,color:'#22c55e'},
-    {district:'Mysuru',pct:40,current:'1 team',delta:0,color:'#3b82f6'},
-    {district:'Other Districts',pct:25,current:'4 teams',delta:0,color:'#3b82f6'},
+  renderAllocRows('forensic-allocs', [
+    { district: 'Bengaluru Urban', pct: 75, current: '2 FSL Teams', delta: 1, color: '#22c55e' },
+    { district: 'Belagavi Border', pct: 60, current: '2 Drones', delta: 2, color: '#22c55e' },
+    { district: 'Bidar', pct: 50, current: '1 FSL Team', delta: 0, color: '#22c55e' },
+    { district: 'Mysuru', pct: 40, current: '1 FSL Team', delta: 0, color: '#3b82f6' }
   ]);
 
-  // Budget chart
-  const budgetData = [
-    {label:'Personnel',amount:28.4,pct:58,color:'#3b82f6'},
-    {label:'Vehicles & Fuel',amount:8.2,pct:17,color:'#a78bfa'},
-    {label:'Technology & Cyber',amount:4.6,pct:9,color:'#22d3ee'},
-    {label:'Forensics & FSL',amount:3.1,pct:6,color:'#22c55e'},
-    {label:'Surveillance',amount:2.4,pct:5,color:'#f59e0b'},
-    {label:'Others',amount:1.9,pct:4,color:'#6b7280'},
-  ];
-
-  new Chart(document.getElementById('budget-chart').getContext('2d'),{
-    type:'doughnut',
-    data:{
-      labels:budgetData.map(d=>d.label),
-      datasets:[{data:budgetData.map(d=>d.amount),backgroundColor:budgetData.map(d=>d.color+'cc'),borderColor:budgetData.map(d=>d.color),borderWidth:1.5}]
+  // Chart 1: Personnel Bar Chart
+  const ctx1 = document.getElementById('personnel-chart').getContext('2d');
+  new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: ['Bengaluru', 'Mysuru', 'Bidar', 'Kalaburagi', 'Hubballi', 'Belagavi'],
+      datasets: [
+        { label: 'Current Officers', data: [2020, 780, 560, 520, 410, 380], backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 4 },
+        { label: 'AI Recommended', data: [2140, 980, 640, 580, 450, 420], backgroundColor: 'rgba(34, 211, 238, 0.8)', borderRadius: 4 }
+      ]
     },
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`â‚¹${c.parsed}Cr (${budgetData[c.dataIndex].pct}%)`}}},cutout:'65%'}
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { color: 'rgba(255, 255, 255, 0.6)', font: { size: 10 } } } },
+      scales: {
+        y: { grid: { color: 'rgba(255, 255, 255, 0.04)' }, ticks: { color: 'rgba(255, 255, 255, 0.4)', font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { color: 'rgba(255, 255, 255, 0.4)', font: { size: 9 } } }
+      }
+    }
   });
 
-  const lg = document.getElementById('budget-legend');
-  lg.innerHTML = budgetData.map(d=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-      <div style="width:12px;height:12px;border-radius:3px;background:${d.color};flex-shrink:0"></div>
-      <div style="flex:1;font-size:0.8rem;color:var(--text-secondary)">${d.label}</div>
-      <div style="font-size:0.8rem;font-weight:700;color:var(--text-primary)">â‚¹${d.amount}Cr</div>
+  // Chart 2: Budget Doughnut Chart
+  const budgetData = [
+    { label: 'Personnel', amount: 28.4, pct: 58, color: '#3b82f6' },
+    { label: 'Vehicles & Fuel', amount: 8.2, pct: 17, color: '#a78bfa' },
+    { label: 'Tech & Cyber', amount: 4.6, pct: 9, color: '#22d3ee' },
+    { label: 'Forensics & FSL', amount: 3.1, pct: 6, color: '#22c55e' },
+    { label: 'Surveillance Drones', amount: 2.4, pct: 5, color: '#f59e0b' },
+    { label: 'Others', amount: 1.9, pct: 4, color: '#6b7280' }
+  ];
+
+  const ctx2 = document.getElementById('budget-chart').getContext('2d');
+  new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+      labels: budgetData.map(d => d.label),
+      datasets: [{
+        data: budgetData.map(d => d.amount),
+        backgroundColor: budgetData.map(d => d.color + 'dd'),
+        borderColor: budgetData.map(d => d.color),
+        borderWidth: 1.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      cutout: '68%'
+    }
+  });
+
+  document.getElementById('budget-legend').innerHTML = budgetData.map(d => `
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+      <div style="width:10px;height:10px;border-radius:2px;background:${d.color};flex-shrink:0"></div>
+      <div style="flex:1;font-size:0.75rem;color:var(--text-secondary)">${d.label}</div>
+      <div style="font-size:0.75rem;font-weight:700;color:var(--text-primary)">₹${d.amount}Cr</div>
     </div>`).join('');
 
-  // Live Backend Integration
+  // Live Backend Sync
   async function loadBackendResourceData() {
     try {
       const res = await fetch('http://localhost:8000/api/dashboard/overview');
@@ -341,7 +522,7 @@
         const data = await res.json();
         if (data && data.total_crimes) {
           const spend = (data.total_crimes * 0.004).toFixed(1);
-          const currentEl = document.getElementById('current-spend-val');
+          const currentEl = document.getElementById('kpi-spend');
           if (currentEl) currentEl.textContent = `₹${spend}Cr`;
         }
       }
@@ -349,21 +530,24 @@
   }
   loadBackendResourceData();
 
-  function recalculate() {
-    const btn = document.querySelector('[onclick="recalculate()"]');
-    btn.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;animation:spin 1s linear infinite"></i> Recalculating...';
+  function recalculateAllocations() {
+    const btn = document.querySelector('[onclick="recalculateAllocations()"]');
+    btn.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;animation:spin 1s linear infinite"></i> Recalculating Matrix...';
     lucide.createIcons();
-    setTimeout(()=>{btn.innerHTML='<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Recalculate';lucide.createIcons();},2000);
+    setTimeout(() => {
+      btn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Recalculate Matrix';
+      lucide.createIcons();
+    }, 1800);
   }
+
   function applyAll() {
-    alert('✅ Resource allocation plan submitted to district SPs for implementation.');
+    alert('✅ AI Resource Dispatch Matrix approved. Orders dispatched to district SPs.');
+  }
+
+  function dispatchOrders() {
+    alert('🚨 Dispatching immediate patrol orders to Mysuru, Bidar, and Bengaluru Urban SPs.');
   }
 </script>
-
-<a class="fab-ai" href="#" id="fab-ai">
-  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
-  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
-</a>
 
 <script src="../js/data.js"></script>
 <script src="../js/db.js"></script>
@@ -375,6 +559,3 @@
 <script src="../js/ai-intelligence-overlay.js"></script>
 </body>
 </html>
-
-
-
