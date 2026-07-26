@@ -306,12 +306,17 @@
       <!-- RIGHT: Interactive Simulation Output -->
       <div style="display:flex;flex-direction:column;gap:var(--space-lg)">
 
-        <!-- Placeholder state -->
-        <div class="card" id="sim-placeholder" style="display:none">
-          <div class="card-body" style="text-align:center;padding:60px var(--space-lg)">
-            <i data-lucide="flask-conical" style="width:48px;height:48px;color:rgba(139,92,246,0.4);margin:0 auto var(--space-md)"></i>
-            <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:8px">Configure & Run Your Simulation</div>
-            <div style="font-size:0.875rem;color:var(--text-muted)">Select interventions on the left panel and click "Run Simulation" to generate AI forecasts.</div>
+        <!-- Placeholder state (visible by default on page load) -->
+        <div class="card" id="sim-placeholder" style="">
+          <div class="card-body" style="text-align:center;padding:80px var(--space-lg)">
+            <i data-lucide="flask-conical" style="width:64px;height:64px;color:rgba(139,92,246,0.5);margin:0 auto 20px;display:block"></i>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--text-primary);margin-bottom:10px">Ready to Simulate</div>
+            <div style="font-size:0.9rem;color:var(--text-muted);max-width:360px;margin:0 auto 24px;line-height:1.6">
+              Toggle the police interventions on the left, then click <strong style="color:var(--accent-blue)">Run Simulation</strong> to see the AI predictions.
+            </div>
+            <button class="btn btn-primary" onclick="window.runSimulation()" style="background:var(--accent-blue);font-weight:700;padding:10px 28px;font-size:0.9rem">
+              <i data-lucide="play" style="width:16px;height:16px"></i> Run Simulation Now
+            </button>
           </div>
         </div>
 
@@ -423,8 +428,8 @@
     const results = document.getElementById('sim-results');
     const resultsInner = document.getElementById('sim-results-inner');
 
-    if (placeholder) placeholder.style.display = 'none';
-    if (results) results.style.display = 'block';
+    if (placeholder) { placeholder.style.display = 'none'; }
+    if (results) { results.style.display = 'block'; }
 
     if (resultsInner) {
       resultsInner.innerHTML = `
@@ -565,11 +570,12 @@
       window.runSimulation();
     });
     loadBackendDistricts();
-    window.applyPreset('festival');
-  });
-
-  window.addEventListener('load', () => {
-    window.runSimulation();
+    // Start with empty state — user must choose interventions and click Run Simulation
+    // Show the placeholder so the right panel is not empty
+    const placeholder = document.getElementById('sim-placeholder');
+    const results = document.getElementById('sim-results');
+    if (placeholder) placeholder.style.display = 'block';
+    if (results) { results.style.display = 'block'; document.getElementById('sim-results-inner').innerHTML = ''; }
   });
 </script>
 
