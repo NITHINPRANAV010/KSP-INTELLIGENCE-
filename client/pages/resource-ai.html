@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -124,23 +124,23 @@
     <div class="card stagger-item" style="margin-bottom:var(--space-lg);border-left:3px solid var(--accent-blue)">
       <div class="card-body" style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-md)">
         <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--text-primary)">â‚¹48.6Cr</div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--text-primary)" id="monthly-budget-val">₹48.6Cr</div>
           <div style="font-size:0.65rem;color:var(--text-muted)">MONTHLY BUDGET</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--success)">â‚¹41.2Cr</div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--success)" id="current-spend-val">₹41.2Cr</div>
           <div style="font-size:0.65rem;color:var(--text-muted)">CURRENT SPEND</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--accent-blue)">â‚¹7.4Cr</div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--accent-blue)" id="available-val">₹7.4Cr</div>
           <div style="font-size:0.65rem;color:var(--text-muted)">AVAILABLE</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--warning)">89%</div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--warning)" id="efficiency-score-val">89%</div>
           <div style="font-size:0.65rem;color:var(--text-muted)">EFFICIENCY SCORE</div>
         </div>
         <div style="text-align:center">
-          <div style="font-size:1.5rem;font-weight:900;color:var(--success)">+23%</div>
+          <div style="font-size:1.5rem;font-weight:900;color:var(--success)" id="reduction-potential-val">+23%</div>
           <div style="font-size:0.65rem;color:var(--text-muted)">CRIME REDUCTION POTENTIAL</div>
         </div>
       </div>
@@ -332,6 +332,22 @@
       <div style="flex:1;font-size:0.8rem;color:var(--text-secondary)">${d.label}</div>
       <div style="font-size:0.8rem;font-weight:700;color:var(--text-primary)">â‚¹${d.amount}Cr</div>
     </div>`).join('');
+
+  // Live Backend Integration
+  async function loadBackendResourceData() {
+    try {
+      const res = await fetch('http://localhost:8000/api/dashboard/overview');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.total_crimes) {
+          const spend = (data.total_crimes * 0.004).toFixed(1);
+          const currentEl = document.getElementById('current-spend-val');
+          if (currentEl) currentEl.textContent = `₹${spend}Cr`;
+        }
+      }
+    } catch(e) {}
+  }
+  loadBackendResourceData();
 
   function recalculate() {
     const btn = document.querySelector('[onclick="recalculate()"]');

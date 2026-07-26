@@ -393,8 +393,23 @@
     document.getElementById('sim-results').style.display='none';
   }
 
+  // Live Backend District Sync
+  async function loadBackendDistricts() {
+    try {
+      const res = await fetch('http://localhost:8000/api/districts');
+      if (res.ok) {
+        const districts = await res.json();
+        const sel = document.getElementById('sim-district');
+        if (sel && districts.length > 0) {
+          sel.innerHTML = districts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('');
+        }
+      }
+    } catch(e) {}
+  }
+
   // Auto-run default simulation on load
   window.addEventListener('load', () => {
+    loadBackendDistricts();
     applyPreset('festival');
     runSimulation();
   });
