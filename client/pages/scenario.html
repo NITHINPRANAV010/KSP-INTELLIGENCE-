@@ -214,7 +214,7 @@
             
             <div style="margin-bottom:var(--space-md)">
               <label style="font-size:0.75rem;color:var(--text-muted);font-weight:700;margin-bottom:6px;display:block">TARGET DISTRICT</label>
-              <select class="form-control" id="sim-district" style="font-size:0.8125rem">
+              <select class="form-control" id="sim-district" style="font-size:0.8125rem" onchange="runSimulation()">
                 <option value="Bengaluru Urban">Bengaluru Urban</option>
                 <option value="Bidar">Bidar</option>
                 <option value="Mysuru">Mysuru</option>
@@ -226,7 +226,7 @@
 
             <div style="margin-bottom:var(--space-md)">
               <label style="font-size:0.75rem;color:var(--text-muted);font-weight:700;margin-bottom:6px;display:block">TIME HORIZON</label>
-              <select class="form-control" id="sim-time" style="font-size:0.8125rem">
+              <select class="form-control" id="sim-time" style="font-size:0.8125rem" onchange="runSimulation()">
                 <option value="Next 7 Days">Next 7 Days</option>
                 <option value="Next 30 Days">Next 30 Days</option>
                 <option value="Next 24 Hours">Next 24 Hours</option>
@@ -352,15 +352,16 @@
     community: { crime: -8, arrest: +5, public: +25, cost: 0.6, label: 'Community Tip Line' },
   };
 
-  function toggleAction(key) {
+  window.toggleAction = function(key) {
     state[key] = !state[key];
     const sw = document.getElementById('sw-' + key);
     const tgl = document.getElementById('tgl-' + key);
     if (sw) sw.classList.toggle('on', state[key]);
     if (tgl) tgl.classList.toggle('enabled', state[key]);
-  }
+    runSimulation();
+  };
 
-  function applyPreset(type) {
+  window.applyPreset = function(type) {
     Object.keys(state).forEach(k => {
       state[k] = false;
       const sw = document.getElementById('sw-' + k);
@@ -375,14 +376,20 @@
       serial: ['patrol', 'cctv', 'arrest', 'community']
     };
     if (presets[type]) {
-      presets[type].forEach(k => toggleAction(k));
+      presets[type].forEach(k => {
+        state[k] = true;
+        const sw = document.getElementById('sw-' + k);
+        const tgl = document.getElementById('tgl-' + k);
+        if (sw) sw.classList.add('on');
+        if (tgl) tgl.classList.add('enabled');
+      });
     }
     runSimulation();
-  }
+  };
 
   let chartInst = null;
 
-  function runSimulation() {
+  window.runSimulation = function() {
     const active = Object.keys(state).filter(k => state[k]);
     if (active.length === 0) {
       alert('Please select at least one intervention toggle on the left to run the simulation.');
@@ -526,15 +533,19 @@
           }
         });
       }
-    }, 600);
-  }
+    }, 400);
+  };
 
-  function resetAll() {
+  window.resetAll = function() {
     Object.keys(state).forEach(k => {
-      if (state[k]) toggleAction(k);
+      state[k] = false;
+      const sw = document.getElementById('sw-' + k);
+      const tgl = document.getElementById('tgl-' + k);
+      if (sw) sw.classList.remove('on');
+      if (tgl) tgl.classList.remove('enabled');
     });
     applyPreset('festival');
-  }
+  };
 
   async function loadBackendDistricts() {
     try {
@@ -549,9 +560,14 @@
     } catch (e) {}
   }
 
-  window.addEventListener('load', () => {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('run-sim-btn')?.addEventListener('click', () => window.runSimulation());
     loadBackendDistricts();
-    applyPreset('festival');
+    window.applyPreset('festival');
+  });
+
+  window.addEventListener('load', () => {
+    window.runSimulation();
   });
 </script>
 
