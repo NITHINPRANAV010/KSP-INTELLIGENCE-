@@ -6,9 +6,8 @@
 (function () {
   'use strict';
 
-  // Zoho Catalyst routes /server/<function_name>/* to the Advanced I/O function
-  const BACKEND_URL = '/server/ksp_api';
-  const WS_URL = null; // WebSockets not available on Catalyst — use Catalyst Signals instead
+  const BACKEND_URL = 'http://localhost:8000/api';
+  const WS_URL = 'ws://localhost:8000/ws';
 
   const KSPAPIClient = {
     isOnline: false,
@@ -183,10 +182,6 @@
      * Establishes real-time push alert sockets
      */
     connectWebSocket: function () {
-      if (!WS_URL) {
-        console.info('API-CLIENT: WebSocket disabled (Catalyst mode). Using polling fallback.');
-        return;
-      }
       try {
         this.ws = new WebSocket(WS_URL);
         this.ws.onmessage = (event) => {
