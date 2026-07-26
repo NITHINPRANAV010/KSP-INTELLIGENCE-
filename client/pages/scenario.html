@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -392,6 +392,12 @@
     document.getElementById('sim-placeholder').style.display='block';
     document.getElementById('sim-results').style.display='none';
   }
+
+  // Auto-run default simulation on load
+  window.addEventListener('load', () => {
+    applyPreset('festival');
+    runSimulation();
+  });
 </script>
 
 <script src="../js/ai-intelligence-overlay.js"></script>
