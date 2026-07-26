@@ -93,7 +93,7 @@
     #anomaly-container {
       position: fixed;
       top: 64px;
-      left: 24px;
+      left: calc(var(--sidebar-width, 240px) + 24px);
       right: auto;
       z-index: 9990;
       width: 320px;

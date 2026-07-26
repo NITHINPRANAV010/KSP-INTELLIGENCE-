@@ -1681,7 +1681,7 @@ select.form-control {
 #ksp-toast-container {
   position: fixed;
   bottom: 24px;
-  left: 24px;
+  left: calc(var(--sidebar-width, 240px) + 24px);
   right: auto;
   z-index: 8000;
   display: flex;

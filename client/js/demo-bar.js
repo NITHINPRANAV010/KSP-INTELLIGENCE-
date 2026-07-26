@@ -33,7 +33,7 @@
     bar.style.cssText = `
       position: fixed;
       bottom: 16px;
-      left: 50%;
+      left: calc(50% + 120px);
       transform: translateX(-50%);
       background: rgba(10,10,20,0.92);
       border: 1px solid rgba(139,92,246,0.3);
