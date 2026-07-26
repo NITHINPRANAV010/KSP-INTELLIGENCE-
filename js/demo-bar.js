@@ -16,15 +16,16 @@
     const rootPrefix = isInPagesDir ? '../' : '';
 
     const steps = [
-      { num: '1', label: 'Dashboard',       href: rootPrefix + 'index.html',           emoji: '🏠' },
-      { num: '2', label: 'Heatmap',         href: prefix + 'heatmap.html',             emoji: '🗺️' },
-      { num: '3', label: 'AI Forecast',     href: prefix + 'predictive.html',          emoji: '🧠' },
-      { num: '4', label: 'AI Investigation',href: prefix + 'investigation.html',       emoji: '🤖' },
-      { num: '5', label: 'Criminal Network',href: prefix + 'network.html',             emoji: '🕸️' },
-      { num: '6', label: 'Offenders',       href: prefix + 'offenders.html',           emoji: '👤' },
-      { num: '7', label: 'Patrol AI',       href: prefix + 'patrol.html',              emoji: '🚔' },
-      { num: '8', label: 'Alerts',          href: prefix + 'alerts.html',              emoji: '🔔' },
-      { num: '9', label: 'Reports',         href: prefix + 'reports.html',             emoji: '📋' },
+      { num: '1', label: 'Dashboard',          href: rootPrefix + 'index.html',     emoji: '🏠' },
+      { num: '2', label: 'AI Investigation',   href: prefix + 'investigation.html',  emoji: '🤖' },
+      { num: '3', label: 'Heatmap',            href: prefix + 'heatmap.html',        emoji: '🗺️' },
+      { num: '4', label: 'AI Forecast',        href: prefix + 'predictive.html',     emoji: '🧠' },
+      { num: '5', label: 'Commander Briefing', href: prefix + 'commander.html',      emoji: '🎖️' },
+      { num: '6', label: 'Scenario Sim',       href: prefix + 'scenario.html',       emoji: '🧪' },
+      { num: '7', label: 'Resource AI',        href: prefix + 'resource-ai.html',    emoji: '📦' },
+      { num: '8', label: 'Criminal Network',   href: prefix + 'network.html',        emoji: '🕸️' },
+      { num: '9', label: 'Offenders',          href: prefix + 'offenders.html',      emoji: '👤' },
+      { num: '10', label: 'Patrol AI',         href: prefix + 'patrol.html',         emoji: '🚔' },
     ];
 
     const bar = document.createElement('div');
