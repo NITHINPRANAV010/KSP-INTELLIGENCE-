@@ -118,13 +118,28 @@
       padding: 12px 14px;
       margin-top: 10px;
     }
-    .matrix-control-panel {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: var(--space-md);
-      margin-bottom: var(--space-lg);
+    .dispatch-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
     }
+    .dispatch-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+    .dispatch-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+    }
+    .dispatch-table tr:last-child td { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -195,8 +210,8 @@
     </div>
   </header>
 
-  <!-- MAIN CONTENT -->
-  <main class="main-content page-content">
+  <!-- MAIN CONTENT WITH SAFE BOTTOM PADDING -->
+  <main class="main-content page-content" style="padding-bottom:140px">
     
     <!-- Hero Header & Global Overview -->
     <div class="resource-hero stagger-item">
@@ -294,7 +309,7 @@
     </div>
 
     <!-- 4 Detailed Category Grids -->
-    <div class="resource-grid-2col stagger-item">
+    <div class="resource-grid-2col stagger-item" style="margin-bottom:var(--space-lg)">
 
       <!-- Category 1: Patrol Vehicles -->
       <div class="category-card">
@@ -388,6 +403,88 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- Live Dispatch Activity Log Table -->
+    <div class="card stagger-item" style="margin-bottom:var(--space-lg)">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          <i data-lucide="history" style="width:16px;height:16px;color:var(--accent-cyan)"></i>
+          Recent Dispatch Orders & SP Approvals
+        </div>
+        <span class="badge badge-success">4 DISPATCHES ACTIVE TODAY</span>
+      </div>
+      <div class="card-body" style="padding:0">
+        <table class="dispatch-table">
+          <thead>
+            <tr>
+              <th>Dispatch ID</th>
+              <th>Target District</th>
+              <th>Resources Moved</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>SP Approval</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="font-family:monospace;color:var(--text-muted)">#DP-8904</td>
+              <td><strong>Mysuru District</strong></td>
+              <td>+200 Personnel, +12 Patrol Cars</td>
+              <td>Dasara Event Crowd Security</td>
+              <td><span class="badge badge-success">EN ROUTE</span></td>
+              <td><span style="color:var(--success);font-weight:700">Approved by SP Mysuru</span></td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;color:var(--text-muted)">#DP-8903</td>
+              <td><strong>Bidar District</strong></td>
+              <td>+80 Personnel, +6 Patrol Cars</td>
+              <td>NH-65 Gang Surge Deterrence</td>
+              <td><span class="badge badge-warning">IN PROGRESS</span></td>
+              <td><span style="color:var(--success);font-weight:700">Approved by SP Bidar</span></td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;color:var(--text-muted)">#DP-8902</td>
+              <td><strong>Tumkuru District</strong></td>
+              <td>+2 Cyber Response Teams</td>
+              <td>UPI Phishing Ring Interception</td>
+              <td><span class="badge badge-info">DEPLOYED</span></td>
+              <td><span style="color:var(--success);font-weight:700">Approved by SP Tumkuru</span></td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;color:var(--text-muted)">#DP-8901</td>
+              <td><strong>Bengaluru Urban</strong></td>
+              <td>+8 Patrol Vehicles, +1 FSL Team</td>
+              <td>South City Theft Response</td>
+              <td><span class="badge badge-info">ACTIVE</span></td>
+              <td><span style="color:var(--success);font-weight:700">Approved by DCP Crime</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Final Executive Sign-off Footer Card -->
+    <div class="card stagger-item" style="border:1px solid rgba(34,197,94,0.3);background:rgba(34,197,94,0.04)">
+      <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-md)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:40px;height:40px;border-radius:50%;background:rgba(34,197,94,0.2);display:flex;align-items:center;justify-content:center;color:var(--success)">
+            <i data-lucide="shield-check" style="width:22px;height:22px"></i>
+          </div>
+          <div>
+            <div style="font-weight:800;font-size:0.9375rem;color:var(--text-primary)">Statewide Command Authorization Active</div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">All resource movements are tracked under KSP Operational Directive 2026-B.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:var(--space-sm)">
+          <button class="btn btn-ghost" onclick="window.print()">
+            <i data-lucide="printer" style="width:14px;height:14px"></i> Print Summary
+          </button>
+          <button class="btn btn-primary" onclick="dispatchOrders()">
+            <i data-lucide="send" style="width:14px;height:14px"></i> Confirm & Execute All Orders
+          </button>
+        </div>
+      </div>
     </div>
 
   </main>
