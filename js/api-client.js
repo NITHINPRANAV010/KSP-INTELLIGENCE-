@@ -100,7 +100,11 @@
             console.log(`API-CLIENT: Successfully seeded ${mapped.length} live records from PostgreSQL!`);
 
             // If on main page, retrigger counters and charts recalculations
-            if (window.KSPCounters) KSPCounters.init();
+            if (window.KSPCounters) {
+              if (typeof KSPCounters.initKPICards  === 'function') KSPCounters.initKPICards();
+              if (typeof KSPCounters.initCounters   === 'function') KSPCounters.initCounters();
+              if (typeof KSPCounters.initSparklines === 'function') KSPCounters.initSparklines();
+            }
             if (window.KSPCharts && typeof KSPCharts.initTrendChart === 'function') {
               // Retrigger charts refresh if canvas found
               const canvases = document.querySelectorAll('canvas');

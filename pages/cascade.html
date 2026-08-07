@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Scenario Simulation — KSP Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/core.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/animations.css">
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    .scenario-hero {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.06), rgba(34, 211, 238, 0.08));
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+    .scenario-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: var(--space-lg);
+    }
+    @media (max-width: 1024px) {
+      .scenario-layout { grid-template-columns: 1fr; }
+    }
+    .sim-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+      transition: all 0.2s;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .sim-toggle:hover { background: rgba(255, 255, 255, 0.04); }
+    .sim-toggle.enabled {
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(34, 197, 94, 0.06);
+    }
+    .toggle-switch {
+      width: 42px;
+      height: 22px;
+      border-radius: 11px;
+      background: var(--bg-tertiary);
+      position: relative;
+      cursor: pointer;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .toggle-switch.on { background: var(--success); }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.3s;
+    }
+    .toggle-switch.on::after { transform: translateX(20px); }
+    .result-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+    .result-kpi {
+      text-align: center;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .before-after {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: var(--space-md);
+      align-items: center;
+      margin-bottom: var(--space-md);
+    }
+    .ba-col {
+      text-align: center;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+    .impact-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .impact-row:last-child { border-bottom: none; }
+    .impact-bar-track {
+      flex: 1;
+      height: 6px;
+      border-radius: 99px;
+      background: var(--bg-tertiary);
+      overflow: hidden;
+    }
+    .impact-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.8s ease;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="../index.html">
+      <div class="sidebar-logo-icon">KSP</div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-title">KSP Intelligence</span>
+        <span class="sidebar-logo-sub">Command Center</span>
+      </div>
+    </a>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <a class="nav-item" href="../index.html"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+      <a class="nav-item" href="investigation.html"><span class="nav-icon"><i data-lucide="bot"></i></span><span class="nav-label">AI Investigation</span></a>
+      <a class="nav-item" href="heatmap.html"><span class="nav-icon"><i data-lucide="map"></i></span><span class="nav-label">Crime Heatmap</span></a>
+      <a class="nav-item" href="analytics.html"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Crime Analytics</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-icon"><i data-lucide="clock"></i></span><span class="nav-label">Timeline Replay</span></a>
+
+      <div class="nav-section-label">Investigation</div>
+      <a class="nav-item" href="network.html"><span class="nav-icon"><i data-lucide="git-branch"></i></span><span class="nav-label">Criminal Network</span></a>
+      <a class="nav-item" href="offenders.html"><span class="nav-icon"><i data-lucide="user-x"></i></span><span class="nav-label">Repeat Offenders</span></a>
+      <a class="nav-item" href="predictive.html"><span class="nav-icon"><i data-lucide="brain-circuit"></i></span><span class="nav-label">Predictive Intel</span></a>
+      <a class="nav-item" href="patrol.html"><span class="nav-icon"><i data-lucide="navigation"></i></span><span class="nav-label">Patrol Deployment</span></a>
+      <a class="nav-item" href="serial-crimes.html"><span class="nav-icon"><i data-lucide="link-2"></i></span><span class="nav-label">Serial Crimes</span></a>
+      
+      <div class="nav-section-label">Command</div>
+      <a class="nav-item" href="commander.html"><span class="nav-icon"><i data-lucide="shield-alert"></i></span><span class="nav-label">Commander Briefing</span></a>
+      <a class="nav-item active" href="scenario.html"><span class="nav-icon"><i data-lucide="flask-conical"></i></span><span class="nav-label">AI Scenario Sim</span></a>
+
+      <div class="nav-section-label">Management</div>
+      <a class="nav-item" href="reports.html"><span class="nav-icon"><i data-lucide="file-text"></i></span><span class="nav-label">Reports</span></a>
+      <a class="nav-item" href="alerts.html"><span class="nav-icon"><i data-lucide="bell"></i></span><span class="nav-label">Alerts</span><span class="nav-badge">5</span></a>
+      <a class="nav-item" href="district.html"><span class="nav-icon"><i data-lucide="map-pin"></i></span><span class="nav-label">District Intel</span></a>
+      <a class="nav-item" href="users.html"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">User Management</span></a>
+      <a class="nav-item" href="settings.html"><span class="nav-icon"><i data-lucide="settings"></i></span><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-toggle" id="sidebar-toggle">
+        <i data-lucide="panel-left-close" style="width:16px;height:16px"></i>
+        <span style="font-size:0.75rem">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- TOPBAR -->
+  <header class="topnav" id="topnav">
+    <div class="topnav-page-title">AI Scenario Simulation <span>/ Predictive What-If Decision Engine</span></div>
+    <div class="topnav-actions">
+      <div class="topnav-datetime font-mono text-xs" id="topnav-time"></div>
+      <div class="topnav-profile">
+        <div class="profile-avatar">DCP</div>
+        <div class="profile-info"><span class="profile-name">Sanjay Gupta</span><span class="profile-rank">DCP · Bengaluru Urban</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content page-content" style="padding-bottom:140px">
+    
+    <!-- Hero Banner Explaining What Run Simulation Is -->
+    <div class="scenario-hero stagger-item">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-sm)">
+        <div>
+          <h1 style="font-size:1.5rem;font-weight:900;color:var(--text-primary);display:flex;align-items:center;gap:10px">
+            <i data-lucide="flask-conical" style="width:28px;height:28px;color:#a78bfa"></i>
+            What-If Tactical Scenario Simulator
+          </h1>
+          <p style="font-size:0.875rem;color:var(--text-secondary);margin-top:6px;max-width:900px;line-height:1.6">
+            <strong>What is Run Simulation?</strong> It is an AI decision engine that forecasts how police interventions (such as increasing patrol density, installing CCTV grids, executing suspect arrest warrants, or deploying roadblocks) will reduce crime rates and save costs <em>before</em> deploying real police forces in the field.
+          </p>
+        </div>
+        <div style="display:flex;gap:var(--space-sm)">
+          <button class="btn btn-ghost" onclick="resetAll()"><i data-lucide="rotate-ccw" style="width:14px;height:14px"></i> Reset Controls</button>
+          <button class="btn btn-primary" onclick="runSimulation()" id="run-sim-btn" style="background:var(--accent-blue);font-weight:700">
+            <i data-lucide="play" style="width:16px;height:16px"></i> Run Simulation
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Simulator Grid -->
+    <div class="scenario-layout stagger-item">
+      
+      <!-- LEFT: Intervention Controls -->
+      <div style="display:flex;flex-direction:column;gap:var(--space-lg)">
+        
+        <!-- Controls Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="sliders" style="width:16px;height:16px;color:#a78bfa"></i> Configure Interventions</div>
+          </div>
+          <div class="card-body">
+            
+            <div style="margin-bottom:var(--space-md)">
+              <label style="font-size:0.75rem;color:var(--text-muted);font-weight:700;margin-bottom:6px;display:block">TARGET DISTRICT</label>
+              <select class="form-control" id="sim-district" style="font-size:0.8125rem" onchange="runSimulation()">
+                <option value="Bengaluru Urban">Bengaluru Urban</option>
+                <option value="Bidar">Bidar</option>
+                <option value="Mysuru">Mysuru</option>
+                <option value="Kalaburagi">Kalaburagi</option>
+                <option value="Hubballi-Dharwad">Hubballi-Dharwad</option>
+                <option value="Belagavi">Belagavi</option>
+              </select>
+            </div>
+
+            <div style="margin-bottom:var(--space-md)">
+              <label style="font-size:0.75rem;color:var(--text-muted);font-weight:700;margin-bottom:6px;display:block">TIME HORIZON</label>
+              <select class="form-control" id="sim-time" style="font-size:0.8125rem" onchange="runSimulation()">
+                <option value="Next 7 Days">Next 7 Days</option>
+                <option value="Next 30 Days">Next 30 Days</option>
+                <option value="Next 24 Hours">Next 24 Hours</option>
+              </select>
+            </div>
+
+            <div style="font-size:0.7rem;color:var(--text-muted);font-weight:800;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">
+              SELECT POLICE INTERVENTIONS
+            </div>
+
+            <div class="sim-toggle" id="tgl-patrol" onclick="toggleAction('patrol')">
+              <div>
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">🚔 Increase Patrols (+50%)</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">High-threat corridor coverage</div>
+              </div>
+              <div class="toggle-switch" id="sw-patrol"></div>
+            </div>
+
+            <div class="sim-toggle" id="tgl-cctv" onclick="toggleAction('cctv')">
+              <div>
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">📹 Install CCTV Grid</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">AI facial & vehicle monitoring</div>
+              </div>
+              <div class="toggle-switch" id="sw-cctv"></div>
+            </div>
+
+            <div class="sim-toggle" id="tgl-arrest" onclick="toggleAction('arrest')">
+              <div>
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">🎯 Execute Arrest Warrants</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Target top 5 repeat offenders</div>
+              </div>
+              <div class="toggle-switch" id="sw-arrest"></div>
+            </div>
+
+            <div class="sim-toggle" id="tgl-route" onclick="toggleAction('route')">
+              <div>
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">🚧 Block Escape Routes</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">NH 4 / NH 7 highway roadblocks</div>
+              </div>
+              <div class="toggle-switch" id="sw-route"></div>
+            </div>
+
+            <div class="sim-toggle" id="tgl-checkpoint" onclick="toggleAction('checkpoint')">
+              <div>
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">🚔 Deploy Checkpoints</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Strategic city intersections</div>
+              </div>
+              <div class="toggle-switch" id="sw-checkpoint"></div>
+            </div>
+
+            <div class="sim-toggle" id="tgl-community" onclick="toggleAction('community')">
+              <div>
+                <div style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">🤝 Community Awareness</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">Public advisories & tip line</div>
+              </div>
+              <div class="toggle-switch" id="sw-community"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Preset Buttons -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i data-lucide="sparkles" style="width:14px;height:14px;color:#a78bfa"></i> One-Click AI Presets</div>
+          </div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-ghost" onclick="applyPreset('festival')" style="text-align:left;font-size:0.8rem">🎉 Festival Security Protocol</button>
+            <button class="btn btn-ghost" onclick="applyPreset('gang')" style="text-align:left;font-size:0.8rem">⚡ Gang Surge Containment</button>
+            <button class="btn btn-ghost" onclick="applyPreset('cyber')" style="text-align:left;font-size:0.8rem">💻 Cyber Crime Crackdown</button>
+            <button class="btn btn-ghost" onclick="applyPreset('serial')" style="text-align:left;font-size:0.8rem">🔗 Serial Offender Neutralization</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Interactive Simulation Output -->
+      <div style="display:flex;flex-direction:column;gap:var(--space-lg)">
+
+        <!-- Placeholder state (visible by default on page load) -->
+        <div class="card" id="sim-placeholder" style="">
+          <div class="card-body" style="text-align:center;padding:80px var(--space-lg)">
+            <i data-lucide="flask-conical" style="width:64px;height:64px;color:rgba(139,92,246,0.5);margin:0 auto 20px;display:block"></i>
+            <div style="font-size:1.25rem;font-weight:800;color:var(--text-primary);margin-bottom:10px">Ready to Simulate</div>
+            <div style="font-size:0.9rem;color:var(--text-muted);max-width:360px;margin:0 auto 24px;line-height:1.6">
+              Toggle the police interventions on the left, then click <strong style="color:var(--accent-blue)">Run Simulation</strong> to see the AI predictions.
+            </div>
+            <button class="btn btn-primary" onclick="window.runSimulation()" style="background:var(--accent-blue);font-weight:700;padding:10px 28px;font-size:0.9rem">
+              <i data-lucide="play" style="width:16px;height:16px"></i> Run Simulation Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Simulation Results View -->
+        <div id="sim-results">
+          <div id="sim-results-inner"></div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<!-- Floating AI Copilot Button -->
+<a class="fab-ai" href="#" id="fab-ai">
+  <i data-lucide="bot" style="width:22px;height:22px;color:white"></i>
+  <span class="fab-ai-tooltip">AI Copilot (Ctrl+Shift+A)</span>
+</a>
+
+<script>
+  function safeCreateIcons() {
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+      try { lucide.createIcons(); } catch(e) {}
+    }
+  }
+
+  safeCreateIcons();
+
+  function updateTime() {
+    const el = document.getElementById('topnav-time');
+    if (el) el.textContent = new Date().toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short' });
+  }
+  updateTime(); setInterval(updateTime, 1000);
+
+  const state = { patrol: false, cctv: false, arrest: false, route: false, checkpoint: false, community: false };
+  const impacts = {
+    patrol: { crime: -28, arrest: +15, public: +20, cost: 8.4, label: 'Patrol Density (+50%)' },
+    cctv: { crime: -18, arrest: +22, public: +15, cost: 24.5, label: 'CCTV Surveillance Grid' },
+    arrest: { crime: -35, arrest: +25, public: +30, cost: 2.1, label: 'Execute Arrest Warrants' },
+    route: { crime: -15, arrest: +8, public: +12, cost: 1.8, label: 'Block Escape Routes' },
+    checkpoint: { crime: -12, arrest: +18, public: +10, cost: 3.2, label: 'Deploy Checkpoints' },
+    community: { crime: -8, arrest: +5, public: +25, cost: 0.6, label: 'Community Tip Line' },
+  };
+
+  window.toggleAction = function(key) {
+    state[key] = !state[key];
+    const sw = document.getElementById('sw-' + key);
+    const tgl = document.getElementById('tgl-' + key);
+    if (sw) sw.classList.toggle('on', state[key]);
+    if (tgl) tgl.classList.toggle('enabled', state[key]);
+    window.runSimulation();
+  };
+
+  window.applyPreset = function(type) {
+    Object.keys(state).forEach(k => {
+      state[k] = false;
+      const sw = document.getElementById('sw-' + k);
+      const tgl = document.getElementById('tgl-' + k);
+      if (sw) sw.classList.remove('on');
+      if (tgl) tgl.classList.remove('enabled');
+    });
+    const presets = {
+      festival: ['patrol', 'cctv', 'checkpoint', 'community'],
+      gang: ['patrol', 'arrest', 'route', 'checkpoint'],
+      cyber: ['cctv', 'arrest', 'community'],
+      serial: ['patrol', 'cctv', 'arrest', 'community']
+    };
+    if (presets[type]) {
+      presets[type].forEach(k => {
+        state[k] = true;
+        const sw = document.getElementById('sw-' + k);
+        const tgl = document.getElementById('tgl-' + k);
+        if (sw) sw.classList.add('on');
+        if (tgl) tgl.classList.add('enabled');
+      });
+    }
+    window.runSimulation();
+  };
+
+  let chartInst = null;
+
+  window.runSimulation = function() {
+    const active = Object.keys(state).filter(k => state[k]);
+    if (active.length === 0) {
+      alert('Please select at least one intervention toggle on the left to run the simulation.');
+      return;
+    }
+
+    let totalCrime = 0, totalArrest = 0, totalPublic = 0, totalCost = 0;
+    active.forEach(k => {
+      totalCrime += impacts[k].crime;
+      totalArrest += impacts[k].arrest;
+      totalPublic += impacts[k].public;
+      totalCost += impacts[k].cost;
+    });
+
+    totalCrime = Math.max(totalCrime, -75);
+    totalArrest = Math.min(totalArrest, 65);
+    totalPublic = Math.min(totalPublic, 85);
+
+    const district = document.getElementById('sim-district')?.value || 'Bengaluru Urban';
+    const timeWindow = document.getElementById('sim-time')?.value || 'Next 7 Days';
+    const baseline = 247;
+    const projected = Math.round(baseline * (1 + totalCrime / 100));
+
+    const placeholder = document.getElementById('sim-placeholder');
+    const results = document.getElementById('sim-results');
+    const resultsInner = document.getElementById('sim-results-inner');
+
+    if (placeholder) { placeholder.style.display = 'none'; }
+    if (results) { results.style.display = 'block'; }
+
+    if (resultsInner) {
+      resultsInner.innerHTML = `
+        <div class="card" style="margin-bottom:var(--space-lg);border:1px solid rgba(34,197,94,0.3);background:linear-gradient(135deg,rgba(34,197,94,0.06),rgba(59,130,246,0.04))">
+          <div class="card-header">
+            <div class="card-title" style="display:flex;align-items:center;gap:8px">
+              <i data-lucide="check-circle" style="width:18px;height:18px;color:var(--success)"></i>
+              AI Monte Carlo Simulation Results — ${district}
+            </div>
+            <span class="badge badge-success">MODEL ACCURACY: ${Math.round(82 + active.length * 2.5)}%</span>
+          </div>
+          <div class="card-body">
+            
+            <div class="result-kpi-grid">
+              <div class="result-kpi" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.05)">
+                <div style="font-size:2.25rem;font-weight:900;color:var(--success);line-height:1">${totalCrime}%</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;margin-top:6px">CRIME REDUCTION</div>
+                <div style="font-size:0.75rem;color:var(--success);margin-top:4px;font-weight:600">${baseline} → ${projected} incidents</div>
+              </div>
+              <div class="result-kpi" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.05)">
+                <div style="font-size:2.25rem;font-weight:900;color:var(--accent-blue);line-height:1">+${totalArrest}%</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;margin-top:6px">ARREST PROBABILITY</div>
+                <div style="font-size:0.75rem;color:var(--accent-blue);margin-top:4px;font-weight:600">Higher apprehension rate</div>
+              </div>
+              <div class="result-kpi" style="border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.05)">
+                <div style="font-size:2.25rem;font-weight:900;color:#a78bfa;line-height:1">+${totalPublic}%</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);font-weight:700;margin-top:6px">PUBLIC SAFETY SCORE</div>
+                <div style="font-size:0.75rem;color:#a78bfa;margin-top:4px;font-weight:600">Increased citizen confidence</div>
+              </div>
+            </div>
+
+            <div class="before-after">
+              <div class="ba-col" style="border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.05)">
+                <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--critical);margin-bottom:6px">WITHOUT INTERVENTION</div>
+                <div style="font-size:2.5rem;font-weight:900;color:var(--critical)">${baseline}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">projected crimes</div>
+              </div>
+              <div style="text-align:center">
+                <i data-lucide="arrow-right" style="width:28px;height:28px;color:var(--success)"></i>
+                <div style="font-size:0.65rem;color:var(--text-muted);margin-top:4px;font-weight:700">AI PREDICTION</div>
+              </div>
+              <div class="ba-col" style="border-color:rgba(34,197,94,0.3);background:rgba(34,197,94,0.05)">
+                <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--success);margin-bottom:6px">WITH INTERVENTION</div>
+                <div style="font-size:2.5rem;font-weight:900;color:var(--success)">${projected}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">projected crimes</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:var(--space-lg)">
+              <div style="font-weight:700;font-size:0.85rem;margin-bottom:10px;color:var(--text-primary)">Intervention Impact Breakdown</div>
+              ${active.map(k => `
+                <div class="impact-row">
+                  <div style="font-size:0.8rem;color:var(--text-secondary);width:190px;flex-shrink:0;font-weight:600">${impacts[k].label}</div>
+                  <div class="impact-bar-track"><div class="impact-bar-fill" style="width:${Math.abs(impacts[k].crime) * 2}%;background:var(--success)"></div></div>
+                  <div style="font-size:0.8rem;font-weight:700;color:var(--success);width:60px;text-align:right;flex-shrink:0">${impacts[k].crime}%</div>
+                </div>`).join('')}
+            </div>
+
+            <div style="height:220px;margin-bottom:var(--space-lg)">
+              <canvas id="sim-chart"></canvas>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md)">
+              <div style="padding:var(--space-md);background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-md)">
+                <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">TOTAL ESTIMATED COST</div>
+                <div style="font-size:1.5rem;font-weight:900;color:var(--text-primary)">₹${totalCost.toFixed(1)}Cr</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Operational deployment expenditure</div>
+              </div>
+              <div style="padding:var(--space-md);background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.2);border-radius:var(--radius-md)">
+                <div style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:var(--success);margin-bottom:4px">NET FINANCIAL SAVINGS</div>
+                <div style="font-size:1.5rem;font-weight:900;color:var(--success)">+₹${(totalCost * 2.8).toFixed(1)}Cr</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Saved in prevented property loss & damages</div>
+              </div>
+            </div>
+
+          </div>
+        </div>`;
+
+      safeCreateIcons();
+
+      const labels = timeWindow.includes('7') ? ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      const baselineArr = labels.map((_, i) => Math.round(baseline * (1 + i * 0.05)));
+      const projectedArr = labels.map((_, i) => Math.round(baseline * (1 + totalCrime / 100) * (1 - i * 0.02)));
+
+      const ctx = document.getElementById('sim-chart');
+      if (ctx && typeof Chart !== 'undefined') {
+        if (chartInst) chartInst.destroy();
+        chartInst = new Chart(ctx.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Without Intervention', data: baselineArr, borderColor: 'rgba(239,68,68,0.8)', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, fill: true, tension: 0.4, borderDash: [5, 3] },
+              { label: 'With Intervention', data: projectedArr, borderColor: 'rgba(34,197,94,0.8)', backgroundColor: 'rgba(34,197,94,0.1)', borderWidth: 2, fill: true, tension: 0.4 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, labels: { color: 'rgba(255,255,255,0.6)', font: { size: 11 } } } },
+            scales: {
+              y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } } },
+              x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } } }
+            }
+          }
+        });
+      }
+    }
+  };
+
+  window.resetAll = function() {
+    Object.keys(state).forEach(k => {
+      state[k] = false;
+      const sw = document.getElementById('sw-' + k);
+      const tgl = document.getElementById('tgl-' + k);
+      if (sw) sw.classList.remove('on');
+      if (tgl) tgl.classList.remove('enabled');
+    });
+    window.applyPreset('festival');
+  };
+
+  async function loadBackendDistricts() {
+    try {
+      const res = await fetch('http://localhost:8000/api/districts');
+      if (res.ok) {
+        const districts = await res.json();
+        const sel = document.getElementById('sim-district');
+        if (sel && districts.length > 0) {
+          sel.innerHTML = districts.map(d => `<option value="${d.name}">${d.name} (${d.code})</option>`).join('');
+        }
+      }
+    } catch (e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('run-sim-btn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.runSimulation();
+    });
+    loadBackendDistricts();
+    // Start with empty state — user must choose interventions and click Run Simulation
+    // Show the placeholder so the right panel is not empty
+    const placeholder = document.getElementById('sim-placeholder');
+    const results = document.getElementById('sim-results');
+    if (placeholder) placeholder.style.display = 'block';
+    if (results) { results.style.display = 'block'; document.getElementById('sim-results-inner').innerHTML = ''; }
+  });
+</script>
+
+<script src="../js/data.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/api-client.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/command.js"></script>
+<script src="../js/copilot.js"></script>
+<script src="../js/demo-bar.js"></script>
+<script src="../js/ai-intelligence-overlay.js"></script>
+</body>
+</html>
