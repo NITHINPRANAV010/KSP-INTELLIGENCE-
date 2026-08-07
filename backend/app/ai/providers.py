@@ -5,7 +5,7 @@ import json
 
 class LLMProvider:
     @classmethod
-    def query(cls, prompt: str, system_instruction: str = "You are a senior police crime analyst.", provider: str = "local") -> str:
+    def query(cls, prompt: str, system_instruction: str = "You are a senior police crime analyst.", provider: str = "openrouter") -> str:
         # Load credentials
         openai_key = os.getenv("OPENAI_API_KEY", "")
         gemini_key = os.getenv("GEMINI_API_KEY", "")
@@ -13,13 +13,14 @@ class LLMProvider:
         openrouter_key = os.getenv("OPENROUTER_API_KEY", "")
         ollama_url = os.getenv("OLLAMA_API_URL", "http://localhost:11434/api/generate")
 
-        # 1. OpenRouter Integration
+        # 1. OpenRouter Integration — model: inclusionai/ling-3.0-tiny:free
         if provider == "openrouter" and openrouter_key:
+            openrouter_model = os.getenv("OPENROUTER_MODEL", "inclusionai/ling-3.0-tiny:free")
             try:
                 req = urllib.request.Request(
                     "https://openrouter.ai/api/v1/chat/completions",
                     data=json.dumps({
-                        "model": "meta-llama/llama-3-8b-instruct:free",
+                        "model": openrouter_model,
                         "messages": [
                             {"role": "system", "content": system_instruction},
                             {"role": "user", "content": prompt}
@@ -27,15 +28,17 @@ class LLMProvider:
                     }).encode("utf-8"),
                     headers={
                         "Authorization": f"Bearer {openrouter_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://ksp-intelligence.zohocloud.com",
+                        "X-Title": "KSP AI Crime Intelligence"
                     },
                     method="POST"
                 )
-                with urllib.request.urlopen(req, timeout=10) as response:
+                with urllib.request.urlopen(req, timeout=15) as response:
                     res = json.loads(response.read().decode("utf-8"))
                     return res["choices"][0]["message"]["content"]
             except Exception as e:
-                print(f"OpenRouter query failed, fallback: {e}")
+                print(f"OpenRouter (ling-3.0-tiny) query failed, fallback: {e}")
 
         # 2. Local Ollama Integration
         if provider == "ollama":

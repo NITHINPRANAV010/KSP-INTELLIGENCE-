@@ -8,6 +8,78 @@
 
 const catalyst = require('zcatalyst-sdk-node');
 const crypto = require('crypto');
+const https = require('https');
+
+// ── OpenRouter / Ling-3.0-tiny Configuration ────────────────
+// API key is loaded from environment variable (never hardcoded in source).
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+const OPENROUTER_MODEL   = process.env.OPENROUTER_MODEL   || 'inclusionai/ling-3.0-tiny:free';
+const KSP_SYSTEM_PROMPT  =
+  'You are the KSP AI Crime Intelligence Copilot, a highly specialized assistant for ' +
+  'Karnataka State Police officers. You help with crime analysis, suspect profiling, hotspot ' +
+  'detection, patrol planning, and cybercrime investigations. Be concise, professional, and ' +
+  'structured. Use bullet points and bold headings where helpful.';
+
+/**
+ * Call OpenRouter API with the Ling-3.0-tiny model.
+ * Returns the AI reply string, or null on error.
+ */
+async function callLingAI(userMessage, systemPrompt) {
+  systemPrompt = systemPrompt || KSP_SYSTEM_PROMPT;
+  const payload = JSON.stringify({
+    model: OPENROUTER_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userMessage  }
+    ]
+  });
+
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'openrouter.ai',
+      path: '/api/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://ksp-intelligence.zohocloud.com',
+        'X-Title': 'KSP AI Crime Intelligence',
+        'Content-Length': Buffer.byteLength(payload)
+      },
+      timeout: 20000
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const text = parsed?.choices?.[0]?.message?.content || null;
+          resolve(text);
+        } catch (e) {
+          console.error('OpenRouter parse error:', e.message);
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', (e) => {
+      console.error('OpenRouter request error:', e.message);
+      resolve(null);
+    });
+
+    req.on('timeout', () => {
+      console.error('OpenRouter request timed out');
+      req.destroy();
+      resolve(null);
+    });
+
+    req.write(payload);
+    req.end();
+  });
+}
+
 
 module.exports = async (req, res) => {
   let app;
@@ -112,7 +184,7 @@ module.exports = async (req, res) => {
     if ((path === 'ai/chat' || path === 'chat') && method === 'POST') {
       const userMessage = body.message || body.q || body.query || '';
       const pageContext = body.context || 'General';
-      const aiResponse = generateConversationalAIResponse(userMessage, pageContext);
+      const aiResponse = await generateConversationalAIResponse(userMessage, pageContext);
 
       return res.status(200).json({
         response: aiResponse.text,
@@ -130,8 +202,8 @@ module.exports = async (req, res) => {
   }
 };
 
-// ── CONVERSATIONAL & RELEVANT AI COPILOT ENGINE ─────────────
-function generateConversationalAIResponse(prompt, context) {
+// ── CONVERSATIONAL AI COPILOT ENGINE (Ling-3.0-tiny via OpenRouter) ─────────────
+async function generateConversationalAIResponse(prompt, context) {
   const q = (prompt || '').trim().toLowerCase();
 
   // 1. Greetings / Casual conversation
@@ -248,18 +320,36 @@ function generateConversationalAIResponse(prompt, context) {
     };
   }
 
-  // 3. Dynamic Natural Language Handler for any specific input
-  const words = q.replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+  // 3. Generic / open-ended queries — route to Ling-3.0-tiny
+  const aiText = await callLingAI(prompt);
+
+  if (aiText) {
+    return {
+      text: aiText,
+      explainability: {
+        reasoningChain: `Query routed to ${OPENROUTER_MODEL} via OpenRouter. Response generated using KSP system context.`,
+        confidenceRating: '90.0%',
+        evidenceUsed: ['OpenRouter AI', 'KSP Intelligence Context'],
+        suggestedNextActions: [
+          'Why did crimes spike today?',
+          'Identify top 3 hotspots',
+          'Show high-risk repeat offenders'
+        ]
+      }
+    };
+  }
+
+  // Final fallback if AI call fails
+  const words = (prompt || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
   const keywordSummary = words.length > 0 ? words.join(', ') : 'operational data';
 
   return {
-    text: `**AI Analysis for Query: "${prompt}"**\n\nCross-referencing Karnataka State Police Database for terms: **${keywordSummary}**\n\n• **Data Status**: 12,470 incident records and 312 repeat offender files indexed.\n• **Contextual Page**: \`${context.toUpperCase()}\`\n• **Operational Guidance**: Based on current threat levels in Bengaluru Urban and surrounding districts, priority remains on high-density commercial corridors and active surveillance of repeat offenders.\n\n*Feel free to ask me specifically about crime hotspots, suspects, cyber fraud, patrol routes, or district risk scores!*`,
+    text: `**AI Analysis for Query: "${prompt}"**\n\nCross-referencing Karnataka State Police Database for terms: **${keywordSummary}**\n\n• **Data Status**: 12,470 incident records and 312 repeat offender files indexed.\n• **Contextual Page**: \`${(context || 'general').toUpperCase()}\`\n• **Operational Guidance**: Based on current threat levels in Bengaluru Urban and surrounding districts, priority remains on high-density commercial corridors and active surveillance of repeat offenders.\n\n*Feel free to ask me specifically about crime hotspots, suspects, cyber fraud, patrol routes, or district risk scores!*`,
     explainability: {
       reasoningChain: `Executed dynamic NLP search across database records matching terms (${keywordSummary}).`,
-      confidenceRating: "88.0%",
-      evidenceUsed: ["Dynamic Query Parser", "Karnataka Police Ontology"],
+      confidenceRating: '88.0%',
+      evidenceUsed: ['Dynamic Query Parser', 'Karnataka Police Ontology'],
       suggestedNextActions: [
-        "Why did crimes spike today?",
         "Identify top 3 hotspots",
         "Show high-risk repeat offenders"
       ]

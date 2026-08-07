@@ -1,5 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "KSP AI Crime Intelligence Backend"
@@ -13,6 +14,10 @@ class Settings(BaseSettings):
     # AI Engine Thresholds
     CONFIDENCE_THRESHOLD: float = 0.65
     ALERT_SENSITIVITY: str = "medium"
+
+    # OpenRouter / Ling-3.0-tiny
+    OPENROUTER_API_KEY: Optional[str] = None
+    OPENROUTER_MODEL: str = "inclusionai/ling-3.0-tiny:free"
     
     class Config:
         env_file = ".env"

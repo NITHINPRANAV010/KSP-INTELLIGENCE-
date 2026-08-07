@@ -10,6 +10,94 @@
   const CONTEXT_WINDOW = 3;
   const conversationHistory = [];
 
+  // ── OpenRouter / Ling-3.0-tiny Config ─────────────────────
+  // API key is loaded at runtime from window.KSP_CONFIG (set in env-config.js)
+  // so it is never committed to source control.
+  const OPENROUTER_API_KEY = (window.KSP_CONFIG && window.KSP_CONFIG.OPENROUTER_API_KEY) || '';
+  const OPENROUTER_MODEL   = (window.KSP_CONFIG && window.KSP_CONFIG.OPENROUTER_MODEL)   || 'inclusionai/ling-3.0-tiny:free';
+  const KSP_SYSTEM_PROMPT  =
+    'You are the KSP AI Crime Intelligence Copilot for Karnataka State Police. ' +
+    'You assist officers with crime analysis, suspect profiling, hotspot detection, ' +
+    'patrol planning, and cybercrime investigations. Be concise, professional, and ' +
+    'well-structured. Use bold headings and bullet points where helpful.';
+
+  // ── Backend URL (matches api-client.js) ────────────────────
+  const BACKEND_URL = 'http://localhost:8000/api';
+
+  /**
+   * PRIMARY: Call the FastAPI backend /ai/chat endpoint.
+   * The backend runs a full RAG pipeline:
+   *   1. Fetches live stats from the real SQLite DB
+   *   2. Runs TF-IDF semantic search over all crime records
+   *   3. Calls Ling-3.0-tiny with real data as context
+   * Returns the AI response string, or null on error/offline.
+   */
+  async function callBackendChat(userMessage) {
+    try {
+      const token = localStorage.getItem('ksp_auth_token') || '';
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+
+      const resp = await fetch(`${BACKEND_URL}/ai/chat`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message: userMessage }),
+        signal: AbortSignal.timeout(25000)   // 25-second timeout
+      });
+
+      if (!resp.ok) {
+        console.warn('Backend /ai/chat returned HTTP', resp.status);
+        return null;
+      }
+
+      const data = await resp.json();
+      // Backend returns { response: "...", type: "...", data: {...} }
+      return data?.response || null;
+    } catch (err) {
+      // Backend offline or timed out — will fall back to callLingAI
+      console.warn('callBackendChat unavailable:', err.message);
+      return null;
+    }
+  }
+
+  /**
+   * FALLBACK: Call OpenRouter with Ling-3.0-tiny directly (no DB context).
+   * Used when the backend is offline.
+   * Falls back to null on any network/parse error.
+   */
+  async function callLingAI(userMessage) {
+    try {
+      const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type':  'application/json',
+          'HTTP-Referer':  window.location.origin,
+          'X-Title':       'KSP AI Crime Intelligence'
+        },
+        body: JSON.stringify({
+          model:    OPENROUTER_MODEL,
+          messages: [
+            { role: 'system', content: KSP_SYSTEM_PROMPT },
+            { role: 'user',   content: userMessage }
+          ]
+        })
+      });
+      if (!resp.ok) {
+        console.warn('OpenRouter HTTP error:', resp.status);
+        return null;
+      }
+      const data = await resp.json();
+      return data?.choices?.[0]?.message?.content || null;
+    } catch (err) {
+      console.warn('callLingAI error:', err.message);
+      return null;
+    }
+  }
+
+
   // ── Suggested Follow-up Prompts by Topic ─────────────────
   const FOLLOW_UP_SUGGESTIONS = {
     prediction:   ['Show prediction for next month', 'Compare districts by risk', 'Why is this district high risk?'],
@@ -344,9 +432,27 @@
         topic = 'anomaly';
         break;
       }
-      default:
-        responseText = respondFilter(userText, entities);
+      default: {
+        // ── 3-tier waterfall for real-data AI answers ───────────────────────
+        // Tier 1: Backend RAG (real DB stats + semantic search + Ling-3.0-tiny)
+        const backendReply = await callBackendChat(userText);
+        if (backendReply) {
+          responseText = backendReply;
+          console.log('Chat: answered via Backend RAG (real DB data)');
+        } else {
+          // Tier 2: Direct Ling-3.0-tiny (no DB context, backend offline)
+          const aiReply = await callLingAI(userText);
+          if (aiReply) {
+            responseText = aiReply;
+            console.log('Chat: answered via Ling-3.0-tiny direct (backend offline)');
+          } else {
+            // Tier 3: Static local fallback
+            responseText = respondFilter(userText, entities);
+            console.log('Chat: answered via local static fallback');
+          }
+        }
         topic = 'filter';
+      }
     }
 
     conversationHistory.push({ role: 'ai', text: responseText, topic });

@@ -53,3 +53,7 @@ secrets/
 .catalyst/
 catalyst-debug.log
 functions/*/node_modules/
+
+# Runtime environment config (contains API keys — never commit)
+client/env-config.js
+env-config.js
