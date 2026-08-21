@@ -99,19 +99,8 @@
     if (window.lucide) lucide.createIcons();
   });
 
-  // ── Global Search (decorative) ──────────────────────────
-  const searchInput = document.getElementById('global-search');
-  if (searchInput) {
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const q = searchInput.value.trim().toLowerCase();
-        if (q) {
-          // Route to investigation with query
-          window.location.href = `pages/investigation.html?q=${encodeURIComponent(q)}`;
-        }
-      }
-    });
-  }
+  // ── Global Search — Handled by KSPAdvancedSearch (advanced-search.js) ──
+
 
   // ── Command Palette shortcut ────────────────────────────
   document.addEventListener('keydown', (e) => {

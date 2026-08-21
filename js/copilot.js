@@ -1,10 +1,72 @@
 /* =========================================================
    COPILOT.JS — Page-Context AI Copilot Sidebar
    KSP AI Crime Intelligence Command Center
-   Guaranteed Single-Line Input (No Newlines) + Relevant Conversational AI
    ========================================================= */
 
 const KSPCopilot = (() => {
+
+  // ── OpenRouter / Ling-3.0-tiny Config ──────────────────────
+  const OPENROUTER_API_KEY = (window.KSP_CONFIG && window.KSP_CONFIG.OPENROUTER_API_KEY) || localStorage.getItem('openrouter_api_key') || (window.ENV && window.ENV.OPENROUTER_API_KEY) || '';
+  const OPENROUTER_MODEL   = (window.KSP_CONFIG && window.KSP_CONFIG.OPENROUTER_MODEL)   || 'inclusionai/ling-3.0-tiny:free';
+  const BACKEND_URL        = 'http://localhost:8000/api';
+  const KSP_SYSTEM_PROMPT  =
+    'You are the KSP AI Crime Intelligence Copilot — a Senior Police Crime Intelligence Analyst ' +
+    'for Karnataka State Police. Answer based on real Karnataka crime data. ' +
+    'Be concise, professional, and well-structured. Use bold headings and bullet points.';
+
+  /**
+   * Tier 1: Backend RAG (real DB + Ling-3.0-tiny). 25s timeout.
+   */
+  async function callBackendChat(message, pageContext) {
+    try {
+      const token = localStorage.getItem('ksp_auth_token') || '';
+      const res = await fetch(`${BACKEND_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ message, context: pageContext }),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data?.response || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /**
+   * Tier 2: OpenRouter direct (works on Catalyst, no backend needed).
+   */
+  async function callLingAI(message) {
+    if (!OPENROUTER_API_KEY) return null;
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type':  'application/json',
+          'HTTP-Referer':  window.location.origin,
+          'X-Title':       'KSP AI Crime Intelligence'
+        },
+        body: JSON.stringify({
+          model: OPENROUTER_MODEL,
+          messages: [
+            { role: 'system', content: KSP_SYSTEM_PROMPT },
+            { role: 'user',   content: message }
+          ]
+        }),
+        signal: AbortSignal.timeout(25000)
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data?.choices?.[0]?.message?.content || null;
+    } catch (err) {
+      return null;
+    }
+  }
 
   // Page context detection
   const PAGE_CONTEXTS = {
@@ -233,35 +295,21 @@ const KSPCopilot = (() => {
 
     let responseText = "";
 
-    // 1. Fetch live AI response from backend API
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 800);
-      const res = await fetch('http://localhost:8000/api/ai/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('ksp_auth_token') || ''}`
-        },
-        body: JSON.stringify({ message: text, context: currentPage }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.response) {
-          responseText = data.response;
-        }
+    // ── 3-Tier AI Waterfall ───────────────────────────────
+    // Tier 1: Backend RAG (real DB + Ling-3.0-tiny)
+    const backendReply = await callBackendChat(text, currentPage);
+    if (backendReply) {
+      responseText = backendReply;
+    } else {
+      // Tier 2: Direct Ling-3.0-tiny (Catalyst / no backend)
+      const aiReply = await callLingAI(text);
+      if (aiReply) {
+        responseText = aiReply;
+      } else {
+        // Tier 3: Local conversational fallback
+        await new Promise(r => setTimeout(r, 200));
+        responseText = generateLocalConversationalResponse(text, currentPage);
       }
-    } catch (err) {
-      // Fast fallback to local NLP generator
-    }
-
-    // 2. Local Fallback Generator if fetch returned empty or failed
-    if (!responseText) {
-      await new Promise(r => setTimeout(r, 200));
-      responseText = generateLocalConversationalResponse(text, currentPage);
     }
 
     // Remove typing indicator

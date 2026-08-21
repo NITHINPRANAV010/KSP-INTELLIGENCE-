@@ -215,7 +215,7 @@
         <div class="profile-avatar">DCP</div>
         <div class="profile-info">
           <span class="profile-name">Sanjay Gupta</span>
-          <span class="profile-rank">DCP Â· Bengaluru Urban</span>
+          <span class="profile-rank">DCP · Bengaluru Urban</span>
         </div>
         <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--text-muted)"></i>
       </div>
@@ -240,23 +240,23 @@
 
     <!-- Guided Demo Bar -->
     <div class="demo-guide-bar">
-      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;white-space:nowrap;flex-shrink:0">ðŸŽ¯ JUDGE DEMO:</span>
-      <a href="index.html" class="demo-step"><span class="demo-step-num">1</span> Dashboard</a>
-      <a href="pages/heatmap.html" class="demo-step"><span class="demo-step-num">2</span> ðŸ—ºï¸ Heatmap</a>
-      <a href="pages/serial-crimes.html" class="demo-step"><span class="demo-step-num">3</span> ðŸ”— Serial Crimes</a>
-      <a href="pages/commander.html" class="demo-step"><span class="demo-step-num">4</span> ðŸŽ–ï¸ Commander</a>
-      <a href="pages/cascade.html" class="demo-step"><span class="demo-step-num">5</span> ðŸŒŠ Cascade Sim</a>
-            <a href="pages/scenario.html" class="demo-step"><span class="demo-step-num">7</span> ðŸ”¬ Scenario</a>
-      
-      <a href="pages/investigation.html" class="demo-step"><span class="demo-step-num">9</span> ðŸ¤– AI Agent</a>
-      <a href="pages/network.html" class="demo-step"><span class="demo-step-num">10</span> ðŸ•¸ï¸ Network</a>
+      <span style="font-size:0.7rem;font-weight:700;color:#a78bfa;white-space:nowrap;flex-shrink:0">🎯 JUDGE DEMO STEPS:</span>
+      <a href="index.html" class="demo-step"><span class="demo-step-num">1</span> 🏠 Dashboard</a>
+      <a href="pages/investigation.html" class="demo-step"><span class="demo-step-num">2</span> 🤖 AI Investigation</a>
+      <a href="pages/heatmap.html" class="demo-step"><span class="demo-step-num">3</span> 🗺️ Heatmap</a>
+      <a href="pages/predictive.html" class="demo-step"><span class="demo-step-num">4</span> 🧠 AI Forecast</a>
+      <a href="pages/commander.html" class="demo-step"><span class="demo-step-num">5</span> 🎖️ Commander Briefing</a>
+      <a href="pages/scenario.html" class="demo-step"><span class="demo-step-num">6</span> 🧪 Scenario Sim</a>
+      <a href="pages/network.html" class="demo-step"><span class="demo-step-num">7</span> 🕸️ Criminal Network</a>
+      <a href="pages/offenders.html" class="demo-step"><span class="demo-step-num">8</span> 👤 Repeat Offenders</a>
+      <a href="pages/patrol.html" class="demo-step"><span class="demo-step-num">9</span> 🚔 Patrol AI</a>
       <span style="margin-left:auto;font-size:0.65rem;color:var(--text-muted)">KSP AI Decision Intelligence Platform v2.0</span>
     </div>
 
     <div class="page-header">
       <div class="page-header-left">
         <h1 class="page-header-title"><i data-lucide="layout" style="width:24px;height:24px;color:var(--accent-blue)"></i> Command Dashboard</h1>
-        <p class="page-header-sub">Real-time Crime Intelligence Overview â€¢ Karnataka State Police</p>
+        <p class="page-header-sub">Real-time Crime Intelligence Overview • Karnataka State Police</p>
       </div>
     </div>
 
@@ -324,7 +324,7 @@
       <div class="hero-section">
         <div class="hero-badge">
           <i data-lucide="shield" style="width:11px;height:11px"></i>
-          Karnataka State Police Â· AI Intelligence Platform
+          Karnataka State Police · AI Intelligence Platform
         </div>
         <h1 class="hero-title">AI Crime Intelligence<br><span>Command Center</span></h1>
         <p class="hero-subtitle">Real-time analytics, predictive intelligence, and decision support for Karnataka's law enforcement operations.</p>
@@ -754,7 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
       KSPDatabase.init();
       const recent = KSPDatabase.incidents.filter(i => i.status === 'Active').slice(0, 8);
       recent.forEach(inc => {
-        items.push(`<span class="ticker-item">ðŸ”´ <strong>${inc.caseNumber}</strong> Â· ${inc.crimeType} Â· ${inc.policeStation}, ${inc.district} Â· ${inc.time}</span>`);
+        items.push(`<span class="ticker-item">ðŸ”´ <strong>${inc.caseNumber}</strong> · ${inc.crimeType} · ${inc.policeStation}, ${inc.district} · ${inc.time}</span>`);
       });
     }
     // From AI Decision
@@ -762,13 +762,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = KSPDecisionSupport.generate({ max: 4 });
       result.recommendations.forEach(r => {
         const icon = r.priority === 'CRITICAL' ? 'ðŸš¨' : r.priority === 'HIGH' ? 'âš ï¸' : 'ðŸ“Œ';
-        items.push(`<span class="ticker-item">${icon} AI: <strong>${r.action}</strong> Â· ${r.reason.replace(/\*\*/g,'').substring(0,60)}â€¦</span>`);
+        items.push(`<span class="ticker-item">${icon} AI: <strong>${r.action}</strong> · ${r.reason.replace(/\*\*/g,'').substring(0,60)}â€¦</span>`);
       });
     }
     // Fallback
     if (!items.length) {
       items.push(
-        `<span class="ticker-item">ðŸ”´ <strong>CR-2025-BLR-7842</strong> Â· Vehicle Theft Â· Majestic, Bengaluru Urban</span>`,
+        `<span class="ticker-item">ðŸ”´ <strong>CR-2025-BLR-7842</strong> · Vehicle Theft · Majestic, Bengaluru Urban</span>`,
         `<span class="ticker-item">âš ï¸ AI Alert: <strong>Cybercrime surge detected</strong> in Shivajinagar zone</span>`,
         `<span class="ticker-item">ðŸ“Œ Patrol Recommendation: Deploy units to Majestic bus terminal</span>`
       );

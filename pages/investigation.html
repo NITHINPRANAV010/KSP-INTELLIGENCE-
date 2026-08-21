@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/animations.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="../js/env-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
   <style>
@@ -223,15 +224,26 @@
         <div class="panel-body" id="left-panel-content">
           <!-- Evidence Items — populated from DB -->
           <div id="content-left-evidence">
-            <div style="font-size:0.7rem;color:var(--text-muted);padding:4px 0 8px;text-transform:uppercase;letter-spacing:.05em">Recent Evidence Items</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 8px">
+              <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Recent Evidence Items</span>
+              <button class="btn btn-secondary btn-xs" onclick="addNewEvidencePrompt()" style="font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">+ Add Exhibit</button>
+            </div>
             <div id="evidence-list"><!-- populated by JS --></div>
           </div>
           <!-- Witness Statements — populated from DB -->
           <div id="content-left-witness" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 8px">
+              <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Witness Statements</span>
+              <button class="btn btn-secondary btn-xs" onclick="addNewWitnessPrompt()" style="font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">+ Add Witness</button>
+            </div>
             <div id="witness-list"><!-- populated by JS --></div>
           </div>
           <!-- Case Files — populated from DB -->
           <div id="content-left-files" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 8px">
+              <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Case Files</span>
+              <button class="btn btn-secondary btn-xs" onclick="addNewCasePrompt()" style="font-size:0.65rem;padding:2px 8px;border-radius:4px;cursor:pointer">+ Log New Case</button>
+            </div>
             <div id="case-files-list"><!-- populated by JS --></div>
           </div>
         </div>
@@ -239,10 +251,23 @@
 
       <!-- 2. Center Panel: Investigation Board / Chat / Map -->
       <div class="center-panel">
-        <div class="flex" style="border-bottom:1px solid var(--border)">
-          <button class="workspace-tab-btn active" id="tab-center-board">Pin Board</button>
-          <button class="workspace-tab-btn" id="tab-center-chat">AI Assistant</button>
-          <button class="workspace-tab-btn" id="tab-center-map">Location Trace</button>
+        <div class="flex items-center justify-between" style="border-bottom:1px solid var(--border)">
+          <div class="flex">
+            <button class="workspace-tab-btn active" id="tab-center-board">Pin Board</button>
+            <button class="workspace-tab-btn" id="tab-center-chat">AI Assistant</button>
+            <button class="workspace-tab-btn" id="tab-center-map">Location Trace</button>
+          </div>
+          <div style="padding-right:8px;display:flex;align-items:center;gap:6px">
+            <div id="pinboard-zoom-controls" style="display:flex;align-items:center;gap:3px;background:rgba(0,0,0,0.25);padding:2px 6px;border-radius:4px;border:1px solid var(--border)">
+              <button class="btn btn-ghost btn-xs" onclick="changeBoardZoom(-0.1)" title="Zoom Out (-)" style="padding:1px 6px;font-size:0.8rem;height:auto;line-height:1">-</button>
+              <span id="pinboard-zoom-level" style="font-size:0.65rem;color:var(--text-muted);min-width:34px;text-align:center;font-weight:600">100%</span>
+              <button class="btn btn-ghost btn-xs" onclick="changeBoardZoom(0.1)" title="Zoom In (+)" style="padding:1px 6px;font-size:0.8rem;height:auto;line-height:1">+</button>
+              <button class="btn btn-ghost btn-xs" onclick="resetBoardZoom()" title="Reset Zoom" style="padding:1px 4px;font-size:0.6rem;height:auto;color:var(--accent-blue)">Reset</button>
+            </div>
+            <button class="btn btn-primary btn-xs" id="btn-add-pin-note" style="font-size:0.65rem;padding:3px 10px;border-radius:4px" onclick="addNewPinNote()">
+              📌 + Pin Note
+            </button>
+          </div>
         </div>
 
         <!-- Center Content Area -->
@@ -335,6 +360,54 @@
     <div class="modal-footer">
       <button class="btn btn-secondary" id="btn-print-report"><i data-lucide="printer" style="width:13px;height:13px"></i> Print Briefing</button>
       <button class="btn btn-primary" id="btn-download-report"><i data-lucide="file-down" style="width:13px;height:13px"></i> Download PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Case File Dossier Viewer -->
+<div id="case-file-modal" class="modal-backdrop" style="display:none">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <div class="card-title" id="case-file-modal-title">📄 Official Case Dossier</div>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('case-file-modal').style.display='none'"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div class="modal-body" id="case-file-modal-body" style="max-height:480px;overflow-y:auto">
+      <!-- populated dynamically -->
+    </div>
+    <div class="modal-footer" id="case-file-modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('case-file-modal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Evidence Exhibit Viewer -->
+<div id="evidence-modal" class="modal-backdrop" style="display:none">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div class="card-title" id="evidence-modal-title">🏷️ Digital Evidence Exhibit</div>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('evidence-modal').style.display='none'"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div class="modal-body" id="evidence-modal-body" style="max-height:460px;overflow-y:auto">
+      <!-- populated dynamically -->
+    </div>
+    <div class="modal-footer" id="evidence-modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('evidence-modal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Witness Statement Inspector -->
+<div id="witness-modal" class="modal-backdrop" style="display:none">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <div class="card-title" id="witness-modal-title">👤 Witness Testimony Record</div>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('witness-modal').style.display='none'"><i data-lucide="x" style="width:15px;height:15px"></i></button>
+    </div>
+    <div class="modal-body" id="witness-modal-body" style="max-height:460px;overflow-y:auto">
+      <!-- populated dynamically -->
+    </div>
+    <div class="modal-footer" id="witness-modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('witness-modal').style.display='none'">Close</button>
     </div>
   </div>
 </div>
@@ -438,6 +511,9 @@ document.addEventListener('DOMContentLoaded', () => {
       severity:   inc.severity   || null,
       updatedAt:  new Date()
     };
+    // Update AI Detective Intel right panel dynamically
+    populateRightPanel(inc);
+
     // Flash the report button to hint the report is now context-specific
     if (btnReport) {
       btnReport.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.4)';
@@ -458,120 +534,583 @@ document.addEventListener('DOMContentLoaded', () => {
     if (match) setActiveCase(match);
   })();
 
+  // Custom Evidence, Witness & Case File Vault Helpers
+  function getCustomEvidence() { try { return JSON.parse(localStorage.getItem('ksp_custom_evidence') || '[]'); } catch(e) { return []; } }
+  function getCustomWitnesses() { try { return JSON.parse(localStorage.getItem('ksp_custom_witnesses') || '[]'); } catch(e) { return []; } }
+  function getCustomCases() { try { return JSON.parse(localStorage.getItem('ksp_custom_cases') || '[]'); } catch(e) { return []; } }
+
+  window.addNewEvidencePrompt = function() {
+    const title = prompt('Enter Evidence Exhibit Description (e.g. 📹 CCTV Clip Bay 4, 📞 Intercepted CDR Log):');
+    if (!title || !title.trim()) return;
+    const caseId = prompt('Enter Linked FIR / Case ID (e.g. CR-00124):') || 'CR-00124';
+    const station = prompt('Enter Police Station / Precinct:') || 'Shivajinagar PS';
+
+    const customEv = getCustomEvidence();
+    const newId = 'EX-' + Math.floor(1000 + Math.random() * 9000);
+    customEv.unshift({
+      id: newId,
+      title: title.trim(),
+      caseId: caseId.trim(),
+      station: station.trim(),
+      date: new Date().toISOString().split('T')[0],
+      crimeType: 'Digital Exhibit'
+    });
+    localStorage.setItem('ksp_custom_evidence', JSON.stringify(customEv));
+    populateLeftPanels();
+    if (window.showToast) showToast(`🏷️ Evidence Exhibit #${newId} added!`, 'success');
+  };
+
+  window.addNewWitnessPrompt = function() {
+    const name = prompt('Enter Witness Name:');
+    if (!name || !name.trim()) return;
+    const stmt = prompt('Enter Witness Recorded Statement:') || 'Observed suspicious activity at location.';
+    const caseId = prompt('Enter Linked Case ID:') || 'CR-00001';
+
+    const customWit = getCustomWitnesses();
+    customWit.unshift({
+      name: name.trim(),
+      stmt: stmt.trim(),
+      caseId: caseId.trim(),
+      station: 'Central PS'
+    });
+    localStorage.setItem('ksp_custom_witnesses', JSON.stringify(customWit));
+    populateLeftPanels();
+    if (window.showToast) showToast(`👤 Witness statement for ${name} added!`, 'success');
+  };
+
+  window.addNewCasePrompt = function() {
+    const caseNumber = prompt('Enter New FIR / Case Reference ID (e.g. CR-00999):');
+    if (!caseNumber || !caseNumber.trim()) return;
+    const crimeType = prompt('Enter Crime Category (e.g. Cybercrime, Robbery, Vehicle Theft, Narcotics):') || 'Vehicle Theft';
+    const station = prompt('Enter Police Station:') || 'Shivajinagar PS';
+    const suspect = prompt('Enter Primary Suspect Name:') || 'Under Surveillance';
+
+    const newCase = {
+      id: caseNumber.trim(),
+      caseNumber: caseNumber.trim(),
+      crimeType: crimeType.trim(),
+      district: 'Bengaluru Urban',
+      policeStation: station.trim(),
+      date: new Date().toISOString().split('T')[0],
+      status: 'Active',
+      severity: 'high',
+      suspect: { name: suspect.trim(), isRepeatOffender: true }
+    };
+
+    if (window.KSPDatabase && KSPDatabase.incidents) {
+      KSPDatabase.incidents.unshift(newCase);
+    }
+    const customCases = getCustomCases();
+    customCases.unshift(newCase);
+    localStorage.setItem('ksp_custom_cases', JSON.stringify(customCases));
+
+    populateLeftPanels();
+    populatePinBoard();
+    if (window.showToast) showToast(`📂 New Case File ${caseNumber} logged!`, 'success');
+  };
+
   function populateLeftPanels() {
     const incidents = window.KSPDatabase ? KSPDatabase.incidents.slice(0, 50) : [];
-    const blrCases = incidents.filter(i => i.district === 'Bengaluru Urban').slice(0, 6);
+    const customCases = getCustomCases();
+    const allCases = [...customCases, ...incidents];
 
-    // Evidence from recent Bengaluru active cases
-    const evidenceIcons = { 'Vehicle Theft':'🚗', 'Cybercrime':'💻', 'Financial Fraud':'💳', 'Robbery':'🔫', 'Assault':'⚠️', 'Narcotics':'💊', 'Murder':'🔴', 'Missing Persons':'🔍' };
+    const blrCases = allCases.filter(i => i.district === 'Bengaluru Urban' || !i.district).slice(0, 10);
+    const customEv = getCustomEvidence();
+
+    // Dynamic Evidence from Database + Custom Evidence
+    const evidenceIcons = { 'Vehicle Theft':'🚗', 'Cybercrime':'💻', 'Financial Fraud':'💳', 'Robbery':'🔫', 'Assault':'⚠️', 'Narcotics':'💊', 'Murder':'🔴', 'Missing Persons':'🔍', 'Digital Exhibit':'📹' };
     const evidenceEl = document.getElementById('evidence-list');
-    if (evidenceEl && blrCases.length) {
-      evidenceEl.innerHTML = blrCases.map((c, i) => `
-        <div class="drag-item" draggable="true" id="drag-ev-${i}"
-             title="Click to investigate"
-             onclick="setActiveCase(window.KSPDatabase && KSPDatabase.incidents.find(x=>x.id==='${c.id}')); window.location.href='investigation.html?q='+encodeURIComponent('${c.id} ${c.crimeType}')">
-          ${evidenceIcons[c.crimeType]||'📂'} ${c.crimeType} · ${c.policeStation}
-          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.id} · ${c.date}</div>
-        </div>`).join('');
-    } else if (evidenceEl) {
-      evidenceEl.innerHTML = `
-        <div class="drag-item" draggable="true">📹 CCTV Footages (Shivajinagar)</div>
-        <div class="drag-item" draggable="true">🚗 Vehicle registration KA-01-MF-4892</div>
-        <div class="drag-item" draggable="true">📞 Phone records suspect contact list</div>
-        <div class="drag-item" draggable="true">💳 Suspect transaction history logs</div>`;
+    if (evidenceEl) {
+      let html = '';
+      if (customEv.length) {
+        html += customEv.map(e => `
+          <div class="drag-item" style="border-left:3px solid var(--success);background:rgba(34,197,94,0.06)"
+               title="Click to view evidence exhibit" onclick="openEvidenceModal('${e.id}')">
+            ${evidenceIcons[e.crimeType]||'📂'} Exhibit #${e.id} · ${e.title}
+            <div style="font-size:0.65rem;color:var(--success);margin-top:2px">🆕 Custom Exhibit · ${e.station} · ${e.date}</div>
+          </div>`).join('');
+      }
+      if (blrCases.length) {
+        html += blrCases.map((c, i) => `
+          <div class="drag-item" draggable="true" id="drag-ev-${i}"
+               title="Click to view evidence exhibit"
+               onclick="openEvidenceModal('${c.id}')">
+            ${evidenceIcons[c.crimeType]||'📂'} Exhibit #${c.id} · ${c.crimeType}
+            <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.policeStation} · ${c.date}</div>
+          </div>`).join('');
+      }
+      evidenceEl.innerHTML = html;
     }
 
-    // Witnesses from DB
+    // Dynamic Witnesses from Database + Custom Witnesses
     const witnessList = document.getElementById('witness-list');
-    const witnesses = [
-      { name: 'Anand Ram', stmt: 'Sighted suspicious vehicle near Majestic park around 8:00 AM.' },
-      { name: 'Kavitha K.', stmt: 'Saw 2 individuals copying keys of two-wheelers.' },
-      { name: 'Mohammed S.', stmt: 'Noticed unknown individual lurking near ATM vestibule.' },
-      { name: 'Deepa Nair', stmt: 'Heard altercation before the robbery — 3 suspects fled north.' }
+    const customWit = getCustomWitnesses();
+    const dynamicWitnesses = [
+      ...customWit,
+      { name: 'Anand Ram', stmt: 'Sighted suspicious vehicle near Majestic park around 8:00 AM.', caseId: 'CR-00001', station: 'Shivajinagar PS' },
+      { name: 'Kavitha K.', stmt: 'Saw 2 individuals copying keys of two-wheelers in broad daylight.', caseId: 'CR-00004', station: 'Koramangala PS' },
+      { name: 'Mohammed S.', stmt: 'Noticed unknown individual lurking near ATM vestibule before card alert.', caseId: 'CR-00012', station: 'Indiranagar PS' },
+      { name: 'Deepa Nair', stmt: 'Heard altercation before the robbery — 3 suspects fled northbound.', caseId: 'CR-00018', station: 'Central PS' },
+      { name: 'Ramesh Babu V.', stmt: 'CCTV feed timestamp matches suspect arrival at bus bay 4.', caseId: 'CR-00025', station: 'Majestic Terminal' }
     ];
     if (witnessList) {
-      witnessList.innerHTML = witnesses.map(w => `
-        <div class="card card-sm mb-sm">
-          <div class="bold text-xs" style="color:var(--text-primary)">👤 ${w.name}</div>
+      witnessList.innerHTML = dynamicWitnesses.map(w => `
+        <div class="card card-sm mb-sm" style="cursor:pointer" title="Click to view testimony record" onclick="openWitnessModal('${w.name}', '${w.caseId}')">
+          <div class="bold text-xs" style="color:var(--text-primary);display:flex;justify-content:space-between">
+            <span>👤 ${w.name}</span>
+            <span style="font-size:0.65rem;color:var(--accent-blue)">${w.caseId}</span>
+          </div>
           <div class="text-xs text-muted mt-xs">"${w.stmt}"</div>
+          <div style="font-size:0.62rem;color:var(--text-muted);margin-top:4px">Station: ${w.station}</div>
         </div>`).join('');
     }
 
-    // Case files — most recent 5
+    // Case files — most recent 10 (including custom cases)
     const caseFileEl = document.getElementById('case-files-list');
-    const recentCases = incidents.slice(0, 8);
+    const recentCases = allCases.slice(0, 10);
     if (caseFileEl && recentCases.length) {
       caseFileEl.innerHTML = recentCases.map(c => `
-        <div class="drag-item" style="cursor:pointer"
-             onclick="setActiveCase(window.KSPDatabase && KSPDatabase.incidents.find(x=>x.caseNumber==='${c.caseNumber}')); window.location.href='investigation.html?q='+encodeURIComponent(c.caseNumber)">
-          📂 ${c.caseNumber} · ${c.crimeType}
-          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.district} · ${c.status}</div>
+        <div class="drag-item" style="cursor:pointer;${customCases.some(x=>x.id===c.id)?'border-left:3px solid var(--accent-blue);background:rgba(59,130,246,0.06)':''}" title="Click to view full case dossier"
+             onclick="openCaseFileModal('${c.caseNumber || c.id}')">
+          📂 ${c.caseNumber || c.id} · ${c.crimeType}
+          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px">${c.district || 'Bengaluru Urban'} · ${c.status || 'Active'}</div>
         </div>`).join('');
     }
   }
 
-  // ── Populate Pin Board from Real Cases ───────────────────
+  // ── Interactive Evidence Exhibit Inspector Modal ─────────────
+  window.openEvidenceModal = function(evidenceId) {
+    const modal = document.getElementById('evidence-modal');
+    const body = document.getElementById('evidence-modal-body');
+    const title = document.getElementById('evidence-modal-title');
+    const footer = document.getElementById('evidence-modal-footer');
+    if (!modal || !body) return;
+
+    let inc = null;
+    if (window.KSPDatabase && KSPDatabase.incidents) {
+      inc = KSPDatabase.incidents.find(x => x.id === evidenceId || x.caseNumber === evidenceId);
+    }
+    if (!inc) {
+      inc = { id: evidenceId, caseNumber: 'CR-00124', crimeType: 'Vehicle Theft', district: 'Bengaluru Urban', policeStation: 'Shivajinagar PS', date: '2026-08-14' };
+    }
+
+    title.innerHTML = `🏷️ Digital Evidence Exhibit · <strong>EX-${inc.id || 'EX-9821'}</strong>`;
+
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px;color:var(--text-primary)">
+        <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.25);padding:12px;border-radius:6px">
+          <div style="font-size:0.7rem;text-transform:uppercase;color:var(--accent-blue);font-weight:700">Linked Case Dossier</div>
+          <div style="font-size:1.05rem;font-weight:800;margin-top:2px">${inc.caseNumber || inc.id} · ${inc.crimeType}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">Station: <strong>${inc.policeStation}</strong> | District: <strong>${inc.district}</strong></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:0.75rem">
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:8px;border-radius:4px">
+            <div style="color:var(--text-muted);font-size:0.68rem">EXHIBIT TYPE</div>
+            <div style="font-weight:700;margin-top:2px">📹 CCTV High-Def Stream</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:8px;border-radius:4px">
+            <div style="color:var(--text-muted);font-size:0.68rem">CUSTODY STATUS</div>
+            <div style="font-weight:700;color:var(--success);margin-top:2px">Verifiable SHA-256 Hash</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:10px;border-radius:6px;font-size:0.75rem">
+          <div style="font-weight:700;color:var(--text-muted);text-transform:uppercase;font-size:0.68rem;margin-bottom:4px">CHAIN OF CUSTODY LOG</div>
+          <div>• Collected at ${inc.policeStation} junction on ${inc.date}</div>
+          <div>• Handled by: <strong>HC Sunil Kumar</strong> (Duty Investigator)</div>
+          <div>• Cross-referenced with suspect call detail records (CDR).</div>
+        </div>
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-secondary btn-sm" onclick="pinSpecificCase('${inc.caseNumber || inc.id}')">📌 Pin Exhibit to Board</button>
+      <button class="btn btn-primary btn-sm" onclick="askAICase('${inc.caseNumber || inc.id}')">🤖 Ask AI Detective About Evidence</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('evidence-modal').style.display='none'">Close</button>`;
+
+    modal.style.display = 'flex';
+  };
+
+  // ── Interactive Witness Statement Inspector Modal ────────────
+  window.openWitnessModal = function(witnessName, caseId) {
+    const modal = document.getElementById('witness-modal');
+    const body = document.getElementById('witness-modal-body');
+    const title = document.getElementById('witness-modal-title');
+    const footer = document.getElementById('witness-modal-footer');
+    if (!modal || !body) return;
+
+    title.innerHTML = `👤 Witness Testimony Record · <strong>${witnessName}</strong>`;
+
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px;color:var(--text-primary)">
+        <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.25);padding:12px;border-radius:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-size:0.95rem;font-weight:800">${witnessName}</div>
+            <span class="badge badge-low" style="background:rgba(34,197,94,0.15);color:var(--success)">High Credibility (94%)</span>
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Witness Type: Eyebystander Sighting | Linked Case: <strong>${caseId || 'CR-00001'}</strong></div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:10px;border-radius:6px">
+          <div style="font-weight:700;color:var(--text-muted);text-transform:uppercase;font-size:0.68rem;margin-bottom:4px">OFFICIAL RECORDED STATEMENT</div>
+          <div style="font-size:0.8rem;font-style:italic;color:var(--text-primary);line-height:1.4">"Sighted suspicious individuals observing keyholes of vehicles near the station parking lot around 8:15 AM. One suspect fled north on a blue two-wheeler."</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:0.75rem">
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:8px;border-radius:4px">
+            <div style="color:var(--text-muted);font-size:0.68rem">CORROBORATION</div>
+            <div style="font-weight:700;color:var(--success);margin-top:2px">CCTV Corroborated</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:8px;border-radius:4px">
+            <div style="color:var(--text-muted);font-size:0.68rem">LINE-UP STATUS</div>
+            <div style="font-weight:700;color:var(--warning);margin-top:2px">Photo Lineup Pending</div>
+          </div>
+        </div>
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-primary btn-sm" onclick="askAICase('${caseId || 'CR-00001'}')">🤖 Ask AI Detective About Testimony</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('witness-modal').style.display='none'">Close</button>`;
+
+    modal.style.display = 'flex';
+  };
+
+  // ── Interactive Case File Inspector Modal ───────────────────
+  window.openCaseFileModal = function(caseRef) {
+    const modal = document.getElementById('case-file-modal');
+    const body = document.getElementById('case-file-modal-body');
+    const title = document.getElementById('case-file-modal-title');
+    const footer = document.getElementById('case-file-modal-footer');
+    if (!modal || !body) return;
+
+    let inc = null;
+    if (window.KSPDatabase && KSPDatabase.incidents) {
+      inc = KSPDatabase.incidents.find(x => x.caseNumber === caseRef || x.id === caseRef);
+    }
+    if (!inc) {
+      inc = {
+        caseNumber: caseRef || 'CR-00124',
+        crimeType: 'Vehicle Theft',
+        district: 'Bengaluru Urban',
+        policeStation: 'Shivajinagar PS',
+        date: '2026-08-14',
+        status: 'Active',
+        severity: 'high',
+        suspect: { name: 'Ravi Kumar M.', isRepeatOffender: true }
+      };
+    }
+
+    // Set active case context for AI Detective & Reports
+    if (typeof setActiveCase === 'function') setActiveCase(inc);
+
+    title.innerHTML = `📄 Official Case Dossier · <strong>${inc.caseNumber || inc.id}</strong>`;
+
+    const statusBadge = inc.status === 'Active' ? 'badge-critical' : 'badge-low';
+    const severityBadge = inc.severity === 'critical' ? 'var(--critical)' : inc.severity === 'high' ? 'var(--warning)' : 'var(--accent-blue)';
+
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:12px;color:var(--text-primary)">
+        <!-- Top Metadata Header -->
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);padding:12px;border-radius:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:0.7rem;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.05em">FIR / Case Reference</div>
+              <div style="font-size:1.1rem;font-weight:800;color:var(--accent-blue)">${inc.caseNumber || inc.id}</div>
+            </div>
+            <div style="text-align:right">
+              <span class="badge ${statusBadge}">${(inc.status||'Active').toUpperCase()}</span>
+              <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">${inc.date || 'Recent'}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px;font-size:0.75rem">
+            <div>📍 District: <strong>${inc.district || 'Bengaluru Urban'}</strong></div>
+            <div>🏢 Station: <strong>${inc.policeStation || 'Central PS'}</strong></div>
+            <div>🚨 Category: <strong>${inc.crimeType || 'General Offense'}</strong></div>
+            <div>⚠️ Risk Score: <strong style="color:${severityBadge}">${(inc.severity||'high').toUpperCase()}</strong></div>
+          </div>
+        </div>
+
+        <!-- Suspect Details -->
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);padding:10px 12px;border-radius:6px">
+          <div style="font-size:0.7rem;font-weight:700;color:var(--critical);text-transform:uppercase">👤 Primary Suspect Information</div>
+          <div style="font-size:0.85rem;font-weight:700;margin-top:2px">${inc.suspect ? (inc.suspect.name || inc.suspect) : 'Ravi Kumar M.'}</div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">
+            Recidivism Status: ${inc.suspect && inc.suspect.isRepeatOffender ? '⚠️ Known Repeat Offender (5+ Prior Arrests)' : 'Under Surveillance'}
+          </div>
+        </div>
+
+        <!-- Attached Evidence List -->
+        <div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">📂 Attached Digital Evidence & Exhibits</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-size:0.72rem">📹 CCTV Footages — ${inc.policeStation || 'Shivajinagar'} Area (TimeStamp: 08:14:22)</div>
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-size:0.72rem">🚗 Linked Vehicle Registration — KA-01-MF-4892</div>
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);padding:6px 10px;border-radius:4px;font-size:0.72rem">📞 Call Detail Records (CDR) — Intercepted Contact Graph</div>
+          </div>
+        </div>
+      </div>`;
+
+    footer.innerHTML = `
+      <button class="btn btn-secondary btn-sm" onclick="pinSpecificCase('${inc.caseNumber || inc.id}')">📌 Pin to Board</button>
+      <button class="btn btn-primary btn-sm" onclick="askAICase('${inc.caseNumber || inc.id}')">🤖 Ask AI Detective</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('case-file-modal').style.display='none'">Close</button>`;
+
+    modal.style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+  };
+
+  window.pinSpecificCase = function(caseRef) {
+    const notes = getCustomPinNotes();
+    notes.push({
+      id: 'pin-' + Date.now(),
+      category: '📂 Case File',
+      title: caseRef,
+      detail: 'Investigating active case dossier',
+      top: (40 + (notes.length * 50) % 220) + 'px',
+      left: (40 + (notes.length * 70) % 320) + 'px',
+      color: 'pin-note-blue'
+    });
+    saveCustomPinNotes(notes);
+    populatePinBoard();
+    document.getElementById('case-file-modal').style.display = 'none';
+    if (window.showToast) showToast(`📌 Case ${caseRef} pinned to board!`, 'success');
+  };
+
+  window.askAICase = function(caseRef) {
+    document.getElementById('case-file-modal').style.display = 'none';
+    document.getElementById('tab-center-chat').click();
+    setTimeout(() => {
+      const inp = document.getElementById('chat-input');
+      if (inp) {
+        inp.value = `Provide a full intelligence analysis for case ${caseRef}`;
+        inp.dispatchEvent(new Event('input'));
+        const sendBtn = document.getElementById('chat-send');
+        if (sendBtn) sendBtn.click();
+      }
+    }, 200);
+  };
+
+  // ── Pin Board Zoom & Pinch Controls ─────────────────────────
+  let currentZoom = 1.0;
+
+  window.changeBoardZoom = function(delta) {
+    currentZoom = Math.min(Math.max(0.5, currentZoom + delta), 2.5);
+    applyBoardZoom();
+  };
+
+  window.resetBoardZoom = function() {
+    currentZoom = 1.0;
+    applyBoardZoom();
+  };
+
+  function applyBoardZoom() {
+    const wrapper = document.getElementById('board-zoom-wrapper');
+    const label = document.getElementById('pinboard-zoom-level');
+    if (wrapper) {
+      wrapper.style.transform = `scale(${currentZoom})`;
+    }
+    if (label) {
+      label.textContent = Math.round(currentZoom * 100) + '%';
+    }
+  }
+
+  function initBoardZoomListeners() {
+    const container = document.getElementById('content-center-board');
+    if (!container || container.dataset.zoomBound) return;
+    container.dataset.zoomBound = 'true';
+
+    // 1. Mouse Wheel Zoom on Board Container
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.08 : -0.08;
+      currentZoom = Math.min(Math.max(0.5, currentZoom + delta), 2.5);
+      applyBoardZoom();
+    }, { passive: false });
+
+    // 2. Touch Pinch-to-Zoom
+    let initialPinchDist = null;
+    let initialZoom = 1.0;
+
+    container.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initialZoom = currentZoom;
+      }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialPinchDist) {
+        e.preventDefault();
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const factor = dist / initialPinchDist;
+        currentZoom = Math.min(Math.max(0.5, initialZoom * factor), 2.5);
+        applyBoardZoom();
+      }
+    }, { passive: false });
+
+    container.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        initialPinchDist = null;
+      }
+    });
+  }
+
+  // ── Custom User Pin Notes & Unpinned Cards Persistence ───────
+  function getCustomPinNotes() {
+    try { return JSON.parse(localStorage.getItem('ksp_custom_pin_notes') || '[]'); }
+    catch(e) { return []; }
+  }
+  function saveCustomPinNotes(notes) {
+    localStorage.setItem('ksp_custom_pin_notes', JSON.stringify(notes));
+  }
+  function getUnpinnedCards() {
+    try { return JSON.parse(localStorage.getItem('ksp_unpinned_cards') || '[]'); }
+    catch(e) { return []; }
+  }
+  function saveUnpinnedCards(unpinned) {
+    localStorage.setItem('ksp_unpinned_cards', JSON.stringify(unpinned));
+  }
+
+  window.addNewPinNote = function() {
+    const title = prompt('Enter Pin Note Title / Reference:');
+    if (!title || !title.trim()) return;
+    const detail = prompt('Enter Suspect, Location, or Evidence details:') || '';
+    const category = prompt('Enter Label (e.g. 👤 Suspect Node, 🚗 Asset Linked, 📍 Hotspot Zone, 📝 Investigator Note):') || '📝 Investigator Note';
+
+    const notes = getCustomPinNotes();
+    notes.push({
+      id: 'pin-' + Date.now(),
+      category: category,
+      title: title.trim(),
+      detail: detail.trim(),
+      top: (40 + (notes.length * 50) % 220) + 'px',
+      left: (40 + (notes.length * 70) % 320) + 'px',
+      color: notes.length % 2 === 0 ? 'pin-note-blue' : 'pin-note-red'
+    });
+    saveCustomPinNotes(notes);
+    populatePinBoard();
+    if (window.showToast) showToast('📌 Note pinned to Investigation Board', 'success');
+  };
+
+  window.removePinNote = function(id, event) {
+    if (event) event.stopPropagation();
+    // Check if custom note
+    const customNotes = getCustomPinNotes();
+    const isCustom = customNotes.some(n => n.id === id);
+    if (isCustom) {
+      saveCustomPinNotes(customNotes.filter(n => n.id !== id));
+    } else {
+      const unpinned = getUnpinnedCards();
+      if (!unpinned.includes(id)) {
+        unpinned.push(id);
+        saveUnpinnedCards(unpinned);
+      }
+    }
+    populatePinBoard();
+    if (window.showToast) showToast('📌 Card unpinned from board', 'info');
+  };
+
+  // ── Populate Pin Board from Real Cases + Custom Notes ──────
   function populatePinBoard() {
     const board = document.getElementById('content-center-board');
     if (!board) return;
-    const incidents = window.KSPDatabase ? KSPDatabase.incidents.filter(i => i.status === 'Active').slice(0, 4) : [];
+    const unpinned = getUnpinnedCards();
+    const incidents = window.KSPDatabase ? KSPDatabase.incidents.filter(i => i.status === 'Active' && !unpinned.includes(i.caseNumber || i.id)).slice(0, 4) : [];
     const colors = ['', 'pin-note-blue', 'pin-note-red', ''];
     const positions = [
       { top:'30px', left:'20px' }, { top:'140px', left:'180px' },
       { top:'250px', left:'40px' }, { top:'60px', left:'330px' }
     ];
     const labels = ['🔴 Active Case', '🚗 Asset Linked', '📍 Hotspot Zone', '👤 Suspect Node'];
+    
+    let html = '';
+
+    // Render active DB cases
     if (incidents.length) {
-      board.innerHTML = incidents.map((c, i) => `
-        <div class="pin-note ${colors[i]}" style="top:${positions[i].top};left:${positions[i].left};cursor:pointer"
+      html += incidents.map((c, i) => `
+        <div class="pin-note ${colors[i]}" style="top:${positions[i].top};left:${positions[i].left};cursor:pointer" id="${c.caseNumber}"
              onclick="setActiveCase(window.KSPDatabase && KSPDatabase.incidents.find(x=>x.caseNumber==='${c.caseNumber}')); document.getElementById('tab-center-chat').click();setTimeout(()=>{const inp=document.getElementById('chat-input');inp.value='Investigate case ${c.caseNumber}';inp.dispatchEvent(new Event('input'));},300)">
-          <div class="pin-note-header" style="font-size:0.6rem;font-weight:700;margin-bottom:3px">${labels[i]}</div>
+          <div class="pin-note-header" style="font-size:0.6rem;font-weight:700;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center">
+            <span>${labels[i]}</span>
+            <span onclick="removePinNote('${c.caseNumber}', event)" title="Unpin Note" style="cursor:pointer;padding:0 2px;opacity:0.75;font-weight:bold;font-size:0.85rem">&times;</span>
+          </div>
           <div style="font-size:0.72rem;font-weight:600">${c.caseNumber}</div>
           <div style="font-size:0.65rem;opacity:0.85;margin-top:2px">${c.crimeType}</div>
           <div style="font-size:0.6rem;opacity:0.7">${c.policeStation}</div>
         </div>`).join('');
-    } else {
-      // Fallback
-      board.innerHTML = `
-        <div class="pin-note" style="top:40px;left:30px">
-          <div class="pin-note-header">Suspect Node</div>Ravi Kumar M. · Majestic
-        </div>
-        <div class="pin-note pin-note-blue" style="top:120px;left:200px">
-          <div class="pin-note-header">Primary Asset</div>KA-01-MF-4892
-        </div>
-        <div class="pin-note pin-note-red" style="top:220px;left:60px">
-          <div class="pin-note-header">Cluster Zone</div>Shivajinagar
+    }
+
+    // Render custom user pinned notes
+    const customNotes = getCustomPinNotes();
+    if (customNotes.length) {
+      html += customNotes.map(n => `
+        <div class="pin-note ${n.color}" style="top:${n.top};left:${n.left};cursor:pointer" id="${n.id}">
+          <div class="pin-note-header" style="font-size:0.6rem;font-weight:700;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center">
+            <span>${n.category}</span>
+            <span onclick="removePinNote('${n.id}', event)" title="Unpin Note" style="cursor:pointer;padding:0 2px;opacity:0.75;font-weight:bold;font-size:0.85rem">&times;</span>
+          </div>
+          <div style="font-size:0.72rem;font-weight:600">${n.title}</div>
+          ${n.detail ? `<div style="font-size:0.65rem;opacity:0.85;margin-top:2px">${n.detail}</div>` : ''}
+        </div>`).join('');
+    }
+
+    if (!html) {
+      html = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.8rem;gap:8px">
+          <div>📌 All cards unpinned from board</div>
+          <button class="btn btn-secondary btn-xs" onclick="localStorage.removeItem('ksp_unpinned_cards'); populatePinBoard();" style="font-size:0.7rem">Restore Default Pins</button>
         </div>`;
     }
-    // Re-attach drag
+
+    board.innerHTML = `<div id="board-zoom-wrapper" style="width:100%;height:100%;position:relative;transform-origin:0 0;transform:scale(${currentZoom})">${html}</div>`;
+
+    initBoardZoomListeners();
+
+    // Re-attach drag functionality
     document.querySelectorAll('.pin-note').forEach(note => {
       let isDragging = false, offset = [0,0];
       note.addEventListener('mousedown', e => {
+        if (e.target.tagName === 'SPAN' && e.target.textContent === '×') return;
         isDragging = true;
-        offset = [note.offsetLeft - e.clientX, note.offsetTop - e.clientY];
+        offset = [(note.offsetLeft * currentZoom) - e.clientX, (note.offsetTop * currentZoom) - e.clientY];
       });
       document.addEventListener('mousemove', e => {
         if (!isDragging) return;
-        note.style.left = (e.clientX + offset[0]) + 'px';
-        note.style.top  = (e.clientY + offset[1]) + 'px';
+        note.style.left = ((e.clientX + offset[0]) / currentZoom) + 'px';
+        note.style.top  = ((e.clientY + offset[1]) / currentZoom) + 'px';
       });
       document.addEventListener('mouseup', () => { isDragging = false; });
     });
   }
 
   // ── Populate Right Panel with Live AI Data ────────────────
-  function populateRightPanel() {
-    // Probability from offender profiler
+  function populateRightPanel(activeInc) {
+    const ctx = activeInc || window._activeInvestigation || {};
+    const district = ctx.district || 'Bengaluru Urban';
+    const crimeType = ctx.crimeType || 'Vehicle Theft';
+    const caseRef = ctx.caseNumber || ctx.id || 'CR-00124';
+
+    // Case Resolution Probability dynamically calculated
     let prob = 84, probLabel = 'High Conf', probColor = 'var(--success)';
-    if (window.KSPOffenderProfiler) {
-      const profiles = KSPOffenderProfiler.profileAll();
-      if (profiles.length) {
-        const top = profiles.sort((a,b) => b.riskScore - a.riskScore)[0];
-        prob = Math.min(97, Math.round(60 + top.riskScore * 0.37));
+    if (window.KSPOffenderProfiler && ctx.suspect) {
+      const suspectName = typeof ctx.suspect === 'object' ? ctx.suspect.name : ctx.suspect;
+      const profile = KSPOffenderProfiler.profile({ name: suspectName });
+      if (profile) {
+        prob = Math.min(97, Math.round(55 + profile.riskScore * 0.42));
         probLabel = prob >= 90 ? 'Very High Conf' : prob >= 75 ? 'High Conf' : 'Moderate Conf';
         probColor = prob >= 90 ? 'var(--critical)' : prob >= 75 ? 'var(--success)' : 'var(--warning)';
       }
+    } else if (window.KSPFilterEngine) {
+      const metrics = KSPFilterEngine.getMetrics({ district, crimeType });
+      prob = Math.min(95, Math.max(50, metrics.solveRate + 25));
     }
+
     const probVal = document.getElementById('probability-value');
     const probBadge = document.getElementById('probability-badge');
     const probBar = document.getElementById('probability-bar');
@@ -579,56 +1118,41 @@ document.addEventListener('DOMContentLoaded', () => {
     if (probBadge) probBadge.textContent = probLabel;
     if (probBar) { probBar.style.width = prob + '%'; probBar.style.background = probColor; }
 
-    // Key Findings from Risk Engine
+    // Key Findings for active case / district
     const findingsBox = document.getElementById('key-findings-box');
     if (findingsBox && window.KSPRiskEngine) {
-      const risk = KSPRiskEngine.calculateDistrictRisk('Bengaluru Urban');
+      const risk = KSPRiskEngine.calculateDistrictRisk(district);
       findingsBox.innerHTML = `
-        <div class="ai-why-header"><i data-lucide="info" style="width:12px;height:12px"></i> Key Findings · Bengaluru Urban</div>
-        ${risk.factors.slice(0,4).map(f => `<div class="ai-why-factor">${f}</div>`).join('')}`;
-      lucide.createIcons({ nodes: [findingsBox] });
-    } else if (findingsBox) {
-      findingsBox.innerHTML = `
-        <div class="ai-why-header"><i data-lucide="info" style="width:12px;height:12px"></i> Key Findings</div>
-        <div class="ai-why-factor">High repeat offender involvement in Bengaluru Urban.</div>
-        <div class="ai-why-factor">Suspect cell tower overlap confirmed across 3 incidents.</div>
-        <div class="ai-why-factor">CCTV time-stamp matches witness testimony window.</div>`;
-      lucide.createIcons({ nodes: [findingsBox] });
+        <div class="ai-why-header"><i data-lucide="info" style="width:12px;height:12px"></i> Key Findings · ${caseRef}</div>
+        <div class="ai-why-factor">Active investigation for ${crimeType} in ${ctx.station || 'precinct'}.</div>
+        <div class="ai-why-factor">Primary suspect: ${ctx.suspect ? (ctx.suspect.name || ctx.suspect) : 'Ravi Kumar M.'}.</div>
+        ${risk.factors.slice(0,2).map(f => `<div class="ai-why-factor">${f}</div>`).join('')}`;
+      if (window.lucide) lucide.createIcons({ nodes: [findingsBox] });
     }
 
     // Live Recommendations
     const recsEl = document.getElementById('live-recommendations');
-    if (recsEl && window.KSPDecisionSupport) {
-      const result = KSPDecisionSupport.generate({ max: 3 });
-      recsEl.innerHTML = result.recommendations.map(r => {
-        const borderColor = r.priority === 'CRITICAL' ? 'var(--critical)' : r.priority === 'HIGH' ? 'var(--warning)' : 'var(--accent-blue)';
-        return `
-          <div class="card card-sm" style="border-left:3px solid ${borderColor};background:rgba(255,255,255,0.01);margin-bottom:6px">
-            <div class="bold text-xs text-primary">${r.action}</div>
-            <div class="text-xs text-muted mt-xs">${r.reason.replace(/\*\*/g,'')}</div>
-          </div>`;
-      }).join('');
-    } else if (recsEl) {
+    if (recsEl) {
       recsEl.innerHTML = `
-        <div class="card card-sm" style="border-left:3px solid var(--critical);background:rgba(255,255,255,0.01)">
-          <div class="bold text-xs text-primary">Issue Emergency BOLO</div>
-          <div class="text-xs text-muted mt-xs">Broadcast KA-01-MF-4892 to all border checkposts.</div>
+        <div class="card card-sm" style="border-left:3px solid var(--critical);background:rgba(255,255,255,0.01);margin-bottom:6px">
+          <div class="bold text-xs text-primary">Issue Sector BOLO — ${caseRef}</div>
+          <div class="text-xs text-muted mt-xs">Broadcast suspect details to ${district} checkpoints.</div>
         </div>
-        <div class="card card-sm" style="border-left:3px solid var(--warning);background:rgba(255,255,255,0.01);margin-top:6px">
-          <div class="bold text-xs text-primary">Majestic Surveillance</div>
-          <div class="text-xs text-muted mt-xs">Deploy plainclothes units around Majestic bus terminal.</div>
+        <div class="card card-sm" style="border-left:3px solid var(--warning);background:rgba(255,255,255,0.01)">
+          <div class="bold text-xs text-primary">Request Cell-Tower Intercept</div>
+          <div class="text-xs text-muted mt-xs">Analyze CDR logs for ${ctx.station || 'Shivajinagar PS'} area.</div>
         </div>`;
     }
 
-    // District risk summary card
+    // District Risk Summary
     const distCard = document.getElementById('district-risk-card');
     const distContent = document.getElementById('district-risk-content');
     if (distCard && distContent && window.KSPRiskEngine) {
-      const risk = KSPRiskEngine.calculateDistrictRisk('Bengaluru Urban');
+      const risk = KSPRiskEngine.calculateDistrictRisk(district);
       const riskColor = risk.level === 'critical' ? 'var(--critical)' : risk.level === 'high' ? 'var(--warning)' : 'var(--accent-blue)';
       distContent.innerHTML = `
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold" style="color:var(--text-primary)">Bengaluru Urban</span>
+          <span class="text-xs font-semibold" style="color:var(--text-primary)">${district}</span>
           <span class="badge" style="background:${riskColor}18;color:${riskColor}">${risk.level.toUpperCase()}</span>
         </div>
         <div class="district-risk-bar mt-xs">

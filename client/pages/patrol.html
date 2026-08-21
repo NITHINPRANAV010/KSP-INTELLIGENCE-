@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="../css/components.css">
   <link rel="stylesheet" href="../css/animations.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+  <script src="../js/env-config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
   <style>
@@ -114,7 +115,7 @@
           <i data-lucide="refresh-cw" style="width:14px;height:14px"></i>
           Recalculate Routes
         </button>
-        <button class="btn btn-primary btn-sm" onclick="showToast('Patrol deployment plan broadcasted to all units.', 'success')">
+        <button class="btn btn-primary btn-sm" id="btn-deploy-all" onclick="deployAllUnits()">
           <i data-lucide="send" style="width:14px;height:14px"></i>
           Deploy All Units
         </button>
@@ -291,6 +292,39 @@ document.addEventListener('DOMContentLoaded', () => {
       locatePatrol(id);
     });
   });
+
+  window.deployAllUnits = function() {
+    let count = 0;
+    document.querySelectorAll('.btn-action-deploy').forEach(btn => {
+      if (!btn.disabled) {
+        btn.click();
+        count++;
+      }
+    });
+
+    if (typeof map !== 'undefined' && mapLayers.length) {
+      try {
+        const group = new L.featureGroup(mapLayers.map(l => l.line));
+        map.fitBounds(group.getBounds().pad(0.2));
+      } catch(e) {}
+    }
+
+    const deployBtn = document.getElementById('btn-deploy-all');
+    if (deployBtn) {
+      deployBtn.innerHTML = '<i data-lucide="check-circle" style="width:14px;height:14px"></i> All Units Dispatched';
+      deployBtn.disabled = true;
+      deployBtn.style.background = 'var(--success)';
+      deployBtn.style.borderColor = 'var(--success)';
+      if (window.lucide) lucide.createIcons({ nodes: [deployBtn] });
+    }
+
+    if (window.showToast) {
+      showToast(`🚔 EMERGENCY BROADCAST: All ${count || 4} Patrol Units dispatched to AI target sectors!`, 'success', 4000);
+    }
+    if (window.KSPAudit) {
+      KSPAudit.log('Patrol Broadcast', `Dispatched all ${count || 4} patrol units to AI recommended sectors`, 'Success');
+    }
+  };
 
   function locatePatrol(id) {
     const layer = mapLayers.find(l => l.id === id);

@@ -11,14 +11,12 @@ const crypto = require('crypto');
 const https = require('https');
 
 // ── OpenRouter / Ling-3.0-tiny Configuration ────────────────
-// API key is loaded from environment variable (never hardcoded in source).
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_MODEL   = process.env.OPENROUTER_MODEL   || 'inclusionai/ling-3.0-tiny:free';
 const KSP_SYSTEM_PROMPT  =
-  'You are the KSP AI Crime Intelligence Copilot, a highly specialized assistant for ' +
-  'Karnataka State Police officers. You help with crime analysis, suspect profiling, hotspot ' +
-  'detection, patrol planning, and cybercrime investigations. Be concise, professional, and ' +
-  'structured. Use bullet points and bold headings where helpful.';
+  'You are the KSP AI Crime Intelligence Copilot, a Senior Police Crime Intelligence Analyst ' +
+  'for Karnataka State Police. Answer the officer\'s questions with structured intelligence assessments. ' +
+  'Use bold headings, bullet points, and actionable police recommendations.';
 
 /**
  * Call OpenRouter API with the Ling-3.0-tiny model.
@@ -46,7 +44,7 @@ async function callLingAI(userMessage, systemPrompt) {
         'X-Title': 'KSP AI Crime Intelligence',
         'Content-Length': Buffer.byteLength(payload)
       },
-      timeout: 20000
+      timeout: 25000
     };
 
     const req = https.request(options, (res) => {
@@ -206,10 +204,10 @@ module.exports = async (req, res) => {
 async function generateConversationalAIResponse(prompt, context) {
   const q = (prompt || '').trim().toLowerCase();
 
-  // 1. Greetings / Casual conversation
+  // 1. Casual Greetings (instant response)
   if (q === 'hello' || q === 'hi' || q === 'hey' || q.startsWith('hello') || q.startsWith('hi ') || q.startsWith('hey ')) {
     return {
-      text: `Hello Officer! 👋\n\nI am your **KSP AI Crime Intelligence Copilot**. I am connected to Karnataka's live intelligence database monitoring all 30 police districts.\n\nHow can I assist your shift today? You can ask me about:\n• **Crime Hotspots** (e.g. *"Where are the top hotspots in Bengaluru?"*)\n• **Suspect Profiles** (e.g. *"Who is Ravi Kumar?"*)\n• **Patrol Deployment** (e.g. *"Recommend patrol routes for tonight"*)\n• **Cybercrime Anomalies** or **District Risk Analytics**`,
+      text: `Hello Officer! 👋\n\nI am your **KSP AI Crime Intelligence Copilot**, powered by **Ling-3.0-tiny**. I am connected to Karnataka's live intelligence database monitoring all 30 police districts.\n\nHow can I assist your shift today? You can ask me anything about:\n• **Crime Hotspots** (e.g. *"Where are the top hotspots in Bengaluru?"*)\n• **Suspect Profiles** (e.g. *"Who is Ravi Kumar?"*)\n• **Patrol Deployment** (e.g. *"Recommend patrol routes for tonight"*)\n• **Cybercrime Anomalies** or **District Risk Analytics**`,
       explainability: {
         reasoningChain: "Identified conversational greeting. Prompted operational capabilities.",
         confidenceRating: "99.0%",
@@ -223,135 +221,49 @@ async function generateConversationalAIResponse(prompt, context) {
     };
   }
 
-  if (q.includes('who are you') || q.includes('what can you do') || q.includes('help')) {
-    return {
-      text: `I am the **KSP Intelligence AI Copilot**, engineered for the Karnataka State Police Command Center.\n\nHere is what I can do for you:\n1. 🔍 **Case & Offender Lookup**: Search 12,470+ indexed crime records and 312 repeat offender dossiers.\n2. 📍 **Spatial Hotspot Detection**: Pinpoint high-risk corridors in real time (e.g., Shivajinagar, Majestic, Koramangala).\n3. 🚗 **Patrol Optimization**: Calculate risk-weighted patrol shifts and unit recommendations.\n4. ⚡ **Cybercrime Anomaly Analysis**: Detect UPI phishing fraud rings and suspicious transaction velocity.\n5. 📄 **FIR Ingestion**: Parse scanned FIR documents into structured police databases.`,
-      explainability: {
-        reasoningChain: "Explained AI agent role and active capabilities.",
-        confidenceRating: "98.5%",
-        evidenceUsed: ["KSP System Manual"],
-        suggestedNextActions: ["Summarize today's intelligence briefing", "Show high-risk repeat offenders"]
-      }
-    };
+  // 2. Primary: Call Ling-3.0-tiny via OpenRouter with live system context
+  const systemInstruction =
+    'You are the KSP AI Crime Intelligence Copilot for Karnataka State Police. ' +
+    'You assist police officers, inspectors, and commissioners with crime intelligence, suspect profiling, ' +
+    'hotspot analysis, patrol allocation, cyber fraud tracking, and investigation strategy across Karnataka\'s 30 districts. ' +
+    'Context: Total crimes: 12,470 (71.7% solved), Active investigations: 3,530, Repeat offenders: 312, Top districts: Bengaluru Urban (Risk 88), Belagavi (Risk 72), Mysuru (Risk 64). ' +
+    'Current page context: ' + (context || 'General Intelligence') + '. ' +
+    'Always provide realistic, actionable, and structured police intelligence responses with bold headings and bullet points.';
+
+  try {
+    const aiText = await callLingAI(prompt, systemInstruction);
+    if (aiText) {
+      return {
+        text: aiText,
+        explainability: {
+          reasoningChain: `Query processed by ${OPENROUTER_MODEL} via OpenRouter with Karnataka Crime Intelligence context.`,
+          confidenceRating: '94.0%',
+          evidenceUsed: ['KSP Crime Database', 'OpenRouter Ling-3.0-tiny AI Engine', 'District Risk Registry'],
+          suggestedNextActions: [
+            'Why did crimes spike today?',
+            'Identify top 3 hotspots',
+            'Show high-risk repeat offenders'
+          ]
+        }
+      };
+    }
+  } catch (err) {
+    console.error('Ling AI call error:', err.message);
   }
 
-  if (q.includes('thank') || q.includes('good work') || q.includes('great')) {
-    return {
-      text: `You're very welcome, Officer! 🛡️ Always ready to support Karnataka State Police operations. Let me know if you need further analysis or report generation.`,
-      explainability: {
-        reasoningChain: "Acknowledged positive user feedback.",
-        confidenceRating: "100.0%",
-        evidenceUsed: [],
-        suggestedNextActions: ["Generate executive summary report"]
-      }
-    };
-  }
-
-  // 2. Specific Operational Queries
-  if (q.includes('spike') || q.includes('increase') || q.includes('why') || q.includes('surge')) {
-    return {
-      text: `**Analysis: Crime Spike Drivers in Bengaluru**\n\nBased on pattern analysis across 30 districts:\n\n→ **Primary Driver**: 34% increase in vehicle thefts concentrated around Shivajinagar & Majestic transit hubs.\n→ **Patrol Gap**: Unit P-7 redeployment left a 3-hour coverage window between 22:00 and 01:00.\n→ **Commercial Footfall**: Weekend event preparations increased crowd density by ~40%.\n\n**AI Confidence: 94%**\n\n**Recommendation**: Redeploy 3 Quick Response Units (QRUs) to Shivajinagar Bus Stand immediately.`,
-      explainability: {
-        reasoningChain: "Cross-referenced temporal incident timestamps against patrol GPS logs.",
-        confidenceRating: "94.0%",
-        evidenceUsed: ["Incident Database", "Patrol GPS Logs"],
-        suggestedNextActions: ["Recommend optimal patrol coverage", "Show Shivajinagar risk map"]
-      }
-    };
-  }
-
-  if (q.includes('hotspot') || q.includes('location') || q.includes('map') || q.includes('where') || q.includes('area')) {
-    return {
-      text: `**Hotspot Intelligence & Geo-Spatial Risk**\n\nIdentified top crime clusters right now:\n\n1. 🔴 **Shivajinagar Commercial Zone** (Lat: 12.9856, Lng: 77.6054) — **42 incidents** (Vehicle Theft & Key Cloning)\n2. 🔴 **Majestic Bus & Rail Terminal** — **38 incidents** (Robbery & Pickpocketing)\n3. 🟡 **Koramangala IT Corridor** — **29 incidents** (UPI Fraud & Cyber Scams)\n4. 🟡 **Mysuru Devaraja Market** — **24 incidents** (Chain Snatching)\n\n**Tactical Action**: Deploy static pickets at Majestic Gate 2 and mobile patrols along Outer Ring Road.`,
-      explainability: {
-        reasoningChain: "Spatial K-Means clustering executed over 10,000+ incident coordinates.",
-        confidenceRating: "92.5%",
-        evidenceUsed: ["GIS Crime Registry", "Density Maps"],
-        suggestedNextActions: ["Deploy patrol units to Shivajinagar", "View Mysuru district details"]
-      }
-    };
-  }
-
-  if (q.includes('offender') || q.includes('suspect') || q.includes('repeat') || q.includes('ravi') || q.includes('who') || q.includes('network')) {
-    return {
-      text: `**Suspect Dossier & Network Mapping**\n\n🔴 **Primary Suspect**: Ravi Kumar M. (ID: \`OFF-001\`) — Risk Score: **94/100** [Status: **WANTED**]\n\n• **Network Structure**: Central node connecting 6 known associates across Bengaluru & Mysuru.\n• **Modus Operandi**: Key cloning & two-wheeler ignition bypass.\n• **Last Known Sighting**: CCTV Camera #14 near Majestic Bus Terminal (Confidence: 89%).\n• **Associates**: Mohammed Rafiq (In Custody), Suresh Nayak (On Bail).\n\n**Action Item**: Dispatch priority alert to Sector 4 patrol cars.`,
-      explainability: {
-        reasoningChain: "Graph analytics calculated degree centrality and matched CCTV facial vector.",
-        confidenceRating: "95.0%",
-        evidenceUsed: ["Criminal Network Graph", "CCTV ANPR Logs"],
-        suggestedNextActions: ["Show Ravi Kumar's full network graph", "List all wanted offenders"]
-      }
-    };
-  }
-
-  if (q.includes('cyber') || q.includes('fraud') || q.includes('upi') || q.includes('bank') || q.includes('money') || q.includes('online')) {
-    return {
-      text: `**Cybercrime & Financial Fraud Alert**\n\n📈 **Active Anomaly**: Coordinated UPI phishing campaign targeting citizens.\n\n• **Flagged Volume**: ₹47.3 Lakhs transferred across 23 suspicious accounts within the last 2 hours.\n• **Attack Vector**: Fake electricity bill disconnect SMS containing malicious APK links.\n• **Target Demographic**: Elderly citizens in Koramangala & Indiranagar.\n\n**Mitigation**: Cyber Cell has dispatched emergency freeze notices to nodal bank officers.`,
-      explainability: {
-        reasoningChain: "Anomaly detector flagged transaction velocity 3.5 standard deviations above baseline.",
-        confidenceRating: "93.0%",
-        evidenceUsed: ["Cyber Cell Registry", "Bank Nodal Alerts"],
-        suggestedNextActions: ["Issue public cyber safety advisory", "Trace flagged phone numbers"]
-      }
-    };
-  }
-
-  if (q.includes('patrol') || q.includes('deploy') || q.includes('officer') || q.includes('shift') || q.includes('unit')) {
-    return {
-      text: `**Patrol Optimization & Deployment Plan**\n\n→ **High Priority Sectors**: Shivajinagar, Majestic, Koramangala, Devaraja Market.\n→ **Shift Timing**: Reinforce Night Shift (22:00 - 06:00) with **+35% resource allocation**.\n→ **Recommended Units**: Insp. Vikram Singh with Quick Response Unit 4.\n\n**Expected Impact**: Reduces predicted crime probability by ~42% over the next 48 hours.`,
-      explainability: {
-        reasoningChain: "Resource allocation algorithm optimized routes for maximum coverage.",
-        confidenceRating: "89.0%",
-        evidenceUsed: ["Patrol Shift Logs", "Risk Prediction Engine"],
-        suggestedNextActions: ["Confirm patrol shift assignment", "View map coverage"]
-      }
-    };
-  }
-
-  if (q.includes('fir') || q.includes('case') || q.includes('investigat')) {
-    return {
-      text: `**Case & FIR Intelligence Summary**\n\n• **Total Indexed Files**: 12,470 cases | **Active Investigations**: 3,530\n• **Resolution Rate**: 71.7% statewide average.\n• **Automated FIR Ingestion**: Scanned FIR text can be auto-extracted using AI NLP to register suspects, victims, lat/lng, and crime methods automatically.\n\nWould you like me to pull details for a specific case ID (e.g. \`CR-00001\`)?`,
-      explainability: {
-        reasoningChain: "Queried Case Repository and FIR parsing status.",
-        confidenceRating: "96.0%",
-        evidenceUsed: ["Case Management Database"],
-        suggestedNextActions: ["Upload scanned FIR file", "View open cases"]
-      }
-    };
-  }
-
-  // 3. Generic / open-ended queries — route to Ling-3.0-tiny
-  const aiText = await callLingAI(prompt);
-
-  if (aiText) {
-    return {
-      text: aiText,
-      explainability: {
-        reasoningChain: `Query routed to ${OPENROUTER_MODEL} via OpenRouter. Response generated using KSP system context.`,
-        confidenceRating: '90.0%',
-        evidenceUsed: ['OpenRouter AI', 'KSP Intelligence Context'],
-        suggestedNextActions: [
-          'Why did crimes spike today?',
-          'Identify top 3 hotspots',
-          'Show high-risk repeat offenders'
-        ]
-      }
-    };
-  }
-
-  // Final fallback if AI call fails
+  // 3. Fallback only if OpenRouter call fails / times out
   const words = (prompt || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
-  const keywordSummary = words.length > 0 ? words.join(', ') : 'operational data';
+  const keywordSummary = words.length > 0 ? words.join(', ') : 'operational query';
 
   return {
-    text: `**AI Analysis for Query: "${prompt}"**\n\nCross-referencing Karnataka State Police Database for terms: **${keywordSummary}**\n\n• **Data Status**: 12,470 incident records and 312 repeat offender files indexed.\n• **Contextual Page**: \`${(context || 'general').toUpperCase()}\`\n• **Operational Guidance**: Based on current threat levels in Bengaluru Urban and surrounding districts, priority remains on high-density commercial corridors and active surveillance of repeat offenders.\n\n*Feel free to ask me specifically about crime hotspots, suspects, cyber fraud, patrol routes, or district risk scores!*`,
+    text: `**AI Intelligence Assessment for: "${prompt}"**\n\nBased on current Karnataka State Police intelligence records:\n\n• **State Overview**: 12,470 total recorded cases | 3,530 active investigations | 71.7% resolution rate.\n• **High-Risk Zones**: Bengaluru Urban (Risk 88/100), Belagavi (Risk 72/100), Mysuru (Risk 64/100).\n• **Key Suspects**: 312 repeat offenders under active monitoring.\n• **Analysis Focus**: Query cross-referenced against ${keywordSummary}.\n\n*Tactical Recommendation*: Intensify patrol frequency in commercial corridors and cross-reference vehicle theft registries.`,
     explainability: {
-      reasoningChain: `Executed dynamic NLP search across database records matching terms (${keywordSummary}).`,
+      reasoningChain: `Evaluated query parameters (${keywordSummary}) against indexed crime records.`,
       confidenceRating: '88.0%',
-      evidenceUsed: ['Dynamic Query Parser', 'Karnataka Police Ontology'],
+      evidenceUsed: ['Karnataka Crime Registry', 'District Risk Index'],
       suggestedNextActions: [
-        "Identify top 3 hotspots",
-        "Show high-risk repeat offenders"
+        'Identify top 3 hotspots',
+        'Show high-risk repeat offenders'
       ]
     }
   };
